@@ -1,0 +1,1 @@
+armv7a-21-g++ src/main/jni/simple.cpp -o src/main/jniLibs/armeabi-v7a/libsimple.so
