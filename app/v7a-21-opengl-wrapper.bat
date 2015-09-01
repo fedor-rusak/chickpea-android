@@ -1,0 +1,1 @@
+armv7a-21-g++ -shared src/main/jni/opengl_wrapper.cpp -lGLESv3 -lEGL -landroid -o src/main/jniLibs/armeabi-v7a/libopengl-wrapper.so

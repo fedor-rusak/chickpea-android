@@ -1,1 +1,1 @@
-armv7a-21-g++ -Isrc/main/jni -Isrc/main/jni/native_app_glue -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/main.cpp src/main/jni/native_app_glue/android_native_app_glue.cpp -llog -lEGL -landroid -lGLESv3 -ljxcore -lsimple -o src/main/jniLibs/armeabi-v7a/libnative-activity.so
+armv7a-21-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/main.cpp src/main/jni/android_threaded_adapter.cpp -llog -lEGL -landroid -lGLESv3 -ljx-wrapper -lopengl-wrapper -o src/main/jniLibs/armeabi-v7a/libnative-activity.so
