@@ -4,4 +4,5 @@ namespace jx_wrapper {
 
 	void test();
 
+	void destroy();
 }

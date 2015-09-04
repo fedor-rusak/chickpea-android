@@ -29,8 +29,9 @@ namespace jx_wrapper {
 		char* stringValue =  JX_GetString(&tempProperty);
 		JX_Free(&tempProperty);
 		JX_Free(&tempValue);
-
-		// JX_StopEngine();
 	}
 
+	void destroy() {
+		JX_StopEngine();
+	}
 }

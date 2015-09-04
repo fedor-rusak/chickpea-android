@@ -117,7 +117,12 @@ namespace opengl_wrapper {
 		return createProgram(getVertexShaderText(), getFragmentShaderText());
 	}
 
-	int init(ANativeWindow* window, EGLDisplay& display_dest, EGLContext& context_dest, EGLSurface& surface_dest) {
+
+	static EGLDisplay display;
+	static EGLSurface surface;
+	static EGLContext context;
+
+	int init(ANativeWindow* window) {
 		// initialize OpenGL ES and EGL
 
 		/*
@@ -135,10 +140,8 @@ namespace opengl_wrapper {
 		EGLint w, h, dummy, format;
 		EGLint numConfigs;
 		EGLConfig config;
-		EGLSurface surface;
-		EGLContext context;
 
-		EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+		display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
 		eglInitialize(display, 0, 0);
 
@@ -174,11 +177,6 @@ namespace opengl_wrapper {
 		// sprintf(str, "%s %i %i", "Width&Height ", w,h);
 		// LOGZ(str);
 
-		display_dest = display;
-		// opengl_wrapper::init(engine->display, display);
-		context_dest = context;
-		surface_dest = surface;
-
 		// Initialize GL state.
 		// glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 		glEnable(GL_CULL_FACE);
@@ -189,21 +187,21 @@ namespace opengl_wrapper {
 	}
 
 
-	void destroy(EGLDisplay& display_dest, EGLContext& context_dest, EGLSurface& surface_dest) {
-		if (display_dest != EGL_NO_DISPLAY) {
-			eglMakeCurrent(display_dest, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-			if (context_dest != EGL_NO_CONTEXT) {
-				eglDestroyContext(display_dest, context_dest);
+	void destroy() {
+		if (display != EGL_NO_DISPLAY) {
+			eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+			if (context != EGL_NO_CONTEXT) {
+				eglDestroyContext(display, context);
 			}
-			if (surface_dest != EGL_NO_SURFACE) {
-				eglDestroySurface(display_dest, surface_dest);
+			if (surface != EGL_NO_SURFACE) {
+				eglDestroySurface(display, surface);
 			}
-			eglTerminate(display_dest);
+			eglTerminate(display);
 		}
 
-		display_dest = EGL_NO_DISPLAY;
-		context_dest = EGL_NO_CONTEXT;
-		surface_dest = EGL_NO_SURFACE;
+		display = EGL_NO_DISPLAY;
+		context = EGL_NO_CONTEXT;
+		surface = EGL_NO_SURFACE;
 	}
 
 
@@ -229,7 +227,7 @@ namespace opengl_wrapper {
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 	}
 
-	void swapBuffers(EGLDisplay display, EGLSurface surface) {
+	void swapBuffers() {
 		eglSwapBuffers(display, surface);
 	}
 

@@ -6,11 +6,11 @@ namespace opengl_wrapper {
 
 	uint createProgramBasic();
 
-	void swapBuffers(EGLDisplay, EGLSurface);
+	void swapBuffers();
 
-	int init(ANativeWindow*, EGLDisplay&, EGLContext&, EGLSurface&);
+	int init(ANativeWindow*);
 
-	void destroy(EGLDisplay&, EGLContext&, EGLSurface&);
+	void destroy();
 
 	void initProgram();
 

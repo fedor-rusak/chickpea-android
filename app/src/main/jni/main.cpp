@@ -39,34 +39,18 @@ struct engine_struct {
 	ASensorEventQueue* sensorEventQueue;
 
 	int animating;
-	EGLDisplay display;
-	EGLSurface surface;
-	EGLContext context;
 
 	struct saved_state state;
 };
 
 namespace engine_ns {
 
-	/**
-	 * Initialize an EGL context for the current display.
-	 */
 	static int engine_init_display(engine_struct* engine) {
-		return opengl_wrapper::init(
-			engine->app->window,
-			engine->display,
-			engine->context,
-			engine->surface);
+		return opengl_wrapper::init(engine->app->native_stuff.window);
 	}
 
-	/**
-	 * Tear down the EGL context currently associated with the display.
-	 */
 	static void engine_term_display(engine_struct* engine) {
-		opengl_wrapper::destroy(
-			engine->display,
-			engine->context,
-			engine->surface);
+		opengl_wrapper::destroy();
 
 		engine->animating = 0;
 	}
@@ -138,11 +122,6 @@ namespace engine_ns {
 	static float grey = 0.0;
 
 	static void engine_draw_frame(engine_struct* engine) {
-		if (engine->display == NULL) {
-			LOGZ("ND");
-			return;
-		}
-
 		grey += 0.01f;
 		if (grey > 1.0f) {
 			grey = 0.0f;
@@ -150,7 +129,7 @@ namespace engine_ns {
 
 		opengl_wrapper::render(grey);
 
-		opengl_wrapper::swapBuffers(engine->display, engine->surface);
+		opengl_wrapper::swapBuffers();
 	}
 
 	/**
@@ -167,10 +146,11 @@ namespace engine_ns {
 				break;
 			case APP_CMD_INIT_WINDOW:
 				// The window is being shown, get it ready.
-				if (engine->app->window != NULL) {
+				if (engine->app->native_stuff.window != NULL) {
 					engine_init_display(engine);
-					jx_wrapper::test();
+
 					opengl_wrapper::initProgram();
+
 					engine->animating = 1;
 					engine_draw_frame(engine);
 				}
@@ -180,23 +160,8 @@ namespace engine_ns {
 				engine_term_display(engine);
 				break;
 			case APP_CMD_GAINED_FOCUS:
-				// When our app gains focus, we start monitoring the accelerometer.
-				if (engine->accelerometerSensor != NULL) {
-					ASensorEventQueue_enableSensor(engine->sensorEventQueue,
-							engine->accelerometerSensor);
-					// We'd like to get 60 events per second (in us).
-					ASensorEventQueue_setEventRate(engine->sensorEventQueue,
-							engine->accelerometerSensor, (1000L/60)*1000);
-				}
 				break;
 			case APP_CMD_LOST_FOCUS:
-				// When our app loses focus, we stop monitoring the accelerometer.
-				// This is to avoid consuming battery while not being used.
-				if (engine->accelerometerSensor != NULL) {
-					ASensorEventQueue_disableSensor(engine->sensorEventQueue,
-							engine->accelerometerSensor);
-				}
-				// Also stop animating.
 				engine->animating = 0;
 				engine_draw_frame(engine);
 				break;
@@ -209,34 +174,36 @@ namespace engine_ns {
 	 * event loop for receiving input events and doing other things.
 	 */
 	void android_main(struct android_app* state) {
-		jx_wrapper::init();
-
-		engine_struct engine;
-
 		function_to_prevent_stripping();
 
+		jx_wrapper::init();
+		jx_wrapper::test();
+
+
+		ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+		ALooper_addFd(looper, state->io_stuff.msgread, LOOPER_ID_MAIN, ALOOPER_EVENT_INPUT, NULL, NULL);
+		state->io_stuff.looper = looper;
+
+		engine_struct engine;
 		memset(&engine, 0, sizeof(engine));
 		state->userData = &engine;
-		state->onAppCmd = engine_handle_cmd;
-		state->onInputEvent = engine_handle_input;
 		engine.app = state;
 
-		// Prepare to monitor accelerometer
-		engine.sensorManager = ASensorManager_getInstance();
-		engine.accelerometerSensor = ASensorManager_getDefaultSensor(engine.sensorManager,
-				ASENSOR_TYPE_ACCELEROMETER);
-		engine.sensorEventQueue = ASensorManager_createEventQueue(engine.sensorManager,
-				state->looper, LOOPER_ID_USER, NULL, NULL);
 
 		while (1) {
-			int events;
-			struct android_poll_source* source;
+			int uselessEvents;
 
-			int ident = ALooper_pollAll(0, NULL, &events, (void**)&source);
+			int ident = ALooper_pollAll(0, NULL, &uselessEvents, NULL);
+
+			LOGZ("uselessEvents - %i", uselessEvents);
 
 			if (ident >= 0) {
-				if (source != NULL) {
-					source->process(state, source);
+				if (ident == LOOPER_ID_MAIN) {
+					process_cmd(state, engine_handle_cmd);
+				}
+
+				if (ident == LOOPER_ID_INPUT) {
+					process_input(state, engine_handle_input);
 				}
 
 				if (state->destroyRequested != 0) {
