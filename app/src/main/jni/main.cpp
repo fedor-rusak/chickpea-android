@@ -8,7 +8,7 @@
 #include <android/log.h>
 
 #include <integration_enums.h>
-#include <integration_struct.h>
+#include <integration_contract.h>
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 #define LOGZ(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ZZZ", __VA_ARGS__))
@@ -32,15 +32,11 @@ struct saved_state {
  * Shared state for our app.
  */
 struct engine_struct {
-	struct android_app* app;
-
-	ASensorManager* sensorManager;
-	const ASensor* accelerometerSensor;
-	ASensorEventQueue* sensorEventQueue;
+	global_struct* app;
 
 	int animating;
 
-	struct saved_state state;
+	saved_state state;
 };
 
 namespace engine_ns {
@@ -52,6 +48,8 @@ namespace engine_ns {
 	static void engine_term_display(engine_struct* engine) {
 		opengl_wrapper::destroy();
 
+		jx_wrapper::destroy();
+
 		engine->animating = 0;
 	}
 
@@ -60,8 +58,8 @@ namespace engine_ns {
 	 */
 	static int activeId = -1;
 
-	static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
-		engine_struct* engine = (engine_struct*)app->userData;
+	static int32_t engine_handle_input(global_struct* global, AInputEvent* event) {
+		engine_struct* engine = (engine_struct*)global->appdata.internal;
 		if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
 			switch(AInputEvent_getSource(event)){
 				case AINPUT_SOURCE_TOUCHSCREEN:
@@ -135,14 +133,14 @@ namespace engine_ns {
 	/**
 	 * Process the next main command.
 	 */
-	static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
-		engine_struct* engine = (engine_struct*)app->userData;
+	static void engine_handle_cmd(global_struct* app, int32_t cmd) {
+		engine_struct* engine = (engine_struct*)app->appdata.internal;
 		switch (cmd) {
 			case APP_CMD_SAVE_STATE:
 				// The system has asked us to save our current state.  Do so.
-				engine->app->savedState = malloc(sizeof(struct saved_state));
-				*((struct saved_state*)engine->app->savedState) = engine->state;
-				engine->app->savedStateSize = sizeof(struct saved_state);
+				engine->app->appdata.savedState = malloc(sizeof(struct saved_state));
+				*((struct saved_state*)engine->app->appdata.savedState) = engine->state;
+				engine->app->appdata.savedStateSize = sizeof(struct saved_state);
 				break;
 			case APP_CMD_INIT_WINDOW:
 				// The window is being shown, get it ready.
@@ -173,21 +171,20 @@ namespace engine_ns {
 	 * android_threaded_adapter. It runs in its own thread, with its own
 	 * event loop for receiving input events and doing other things.
 	 */
-	void android_main(struct android_app* state) {
+	void android_main(global_struct* global, char* startScript) {
 		function_to_prevent_stripping();
 
-		jx_wrapper::init();
+		jx_wrapper::initForCurrentThread(startScript);
 		jx_wrapper::test();
 
-
 		ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-		ALooper_addFd(looper, state->io_stuff.msgread, LOOPER_ID_MAIN, ALOOPER_EVENT_INPUT, NULL, NULL);
-		state->io_stuff.looper = looper;
+		ALooper_addFd(looper, global->io_stuff.msgread, LOOPER_ID_MAIN, ALOOPER_EVENT_INPUT, NULL, NULL);
+		global->io_stuff.looper = looper;
 
 		engine_struct engine;
 		memset(&engine, 0, sizeof(engine));
-		state->userData = &engine;
-		engine.app = state;
+		global->appdata.internal = &engine;
+		engine.app = global;
 
 
 		while (1) {
@@ -195,18 +192,16 @@ namespace engine_ns {
 
 			int ident = ALooper_pollAll(0, NULL, &uselessEvents, NULL);
 
-			LOGZ("uselessEvents - %i", uselessEvents);
-
 			if (ident >= 0) {
 				if (ident == LOOPER_ID_MAIN) {
-					process_cmd(state, engine_handle_cmd);
+					process_cmd(global, engine_handle_cmd);
 				}
 
 				if (ident == LOOPER_ID_INPUT) {
-					process_input(state, engine_handle_input);
+					process_input(global, engine_handle_input);
 				}
 
-				if (state->destroyRequested != 0) {
+				if (global->flags.destroyRequested != 0) {
 					engine_term_display(&engine);
 					return;
 				}

@@ -1,1 +1,1 @@
-armv7a-21-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/main.cpp src/main/jni/android_threaded_adapter.cpp -llog -lEGL -landroid -lGLESv3 -ljx-wrapper -lopengl-wrapper -o src/main/jniLibs/armeabi-v7a/libnative-activity.so
+armv7a-21-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/main.cpp src/main/jni/opensles_wrapper.cpp src/main/jni/android_threaded_adapter.cpp -llog -lEGL -landroid -lGLESv3 -ljx-wrapper -lopengl-wrapper -lOpenSLES -o src/main/jniLibs/armeabi-v7a/libnative-activity.so
