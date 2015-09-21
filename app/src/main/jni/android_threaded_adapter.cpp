@@ -289,7 +289,7 @@ static global_struct* global_struct_create(
 	jx_wrapper::init();
 	jx_wrapper::test();
 
-	return setupGlobal(activity, savedState, savedStateSize, global_struct_entry);
+	return setupGlobalStruct(activity, savedState, savedStateSize, global_struct_entry);
 }
 
 static void global_struct_write_cmd(global_struct* global, int8_t cmd) {
