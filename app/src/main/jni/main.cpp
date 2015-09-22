@@ -4,7 +4,6 @@
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-#include <android/sensor.h>
 #include <android/log.h>
 
 #include <integration_enums.h>
@@ -20,10 +19,39 @@
 #include <opengl_wrapper.h>
 #include <jx_wrapper.h>
 
+
+float trygetAxis(const AInputEvent* event) {
+	float result = 0;
+	int i = 1;
+	static const int32_t AXIS_X = 0, AXIS_Y = 1, AXIS_Z = 11, AXIS_RZ = 14, AXIS_HAT_X = 15, AXIS_HAT_Y = 16;
+	float pos[2];
+	for (i = 0; i < 3; i++) {
+		switch(i) {
+			case 0:
+				pos[0] = AMotionEvent_getAxisValue(event, AXIS_X, 0);
+				pos[1] = AMotionEvent_getAxisValue(event, AXIS_Y, 0);
+				result = pos[0];
+				if (result < 0) {result *= -1;}
+			break;
+				pos[0] = AMotionEvent_getAxisValue(event, AXIS_Z, 0);
+				pos[1] = AMotionEvent_getAxisValue(event, AXIS_RZ, 0);
+			break;
+			case 2:
+				pos[0] = AMotionEvent_getAxisValue(event, AXIS_HAT_X, 0);
+				pos[1] = AMotionEvent_getAxisValue(event, AXIS_HAT_Y, 0);
+			break;
+		}
+		LOGZ("DATA%i: %f, %f", i, pos[0], pos[1]);
+	}
+
+	return result;
+}
+
 /**
  * Our saved state data.
  */
 struct saved_state {
+	float value;
 	int32_t x;
 	int32_t y;
 };
@@ -61,6 +89,8 @@ namespace engine_ns {
 	static int32_t engine_handle_input(global_struct* global, AInputEvent* event) {
 		engine_struct* engine = (engine_struct*)global->appdata.internal;
 		if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+			engine->state.value = trygetAxis(event);
+
 			switch(AInputEvent_getSource(event)){
 				case AINPUT_SOURCE_TOUCHSCREEN:
 					int action = AKeyEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
@@ -113,6 +143,12 @@ namespace engine_ns {
 
 			return 1;
 		}
+		else {
+			LOGZ("EventType is %i", AInputEvent_getType(event));
+			LOGZ("Source is %i", AInputEvent_getSource(event));
+			LOGZ("Action is %i",AKeyEvent_getAction(event));
+			LOGZ("KeyCode is %i",AKeyEvent_getKeyCode(event));
+		}
 		return 0;
 	}
 
@@ -121,7 +157,7 @@ namespace engine_ns {
 
 	static void engine_draw_frame(engine_struct* engine) {
 		grey += 0.01f;
-		if (grey > 1.0f) {
+		if (grey > 1.0f - engine->state.value) {
 			grey = 0.0f;
 		}
 
@@ -174,6 +210,8 @@ namespace engine_ns {
 	void android_main(global_struct* global, char* startScript) {
 		function_to_prevent_stripping();
 
+		// dlLoadFuncs();
+
 		jx_wrapper::initForCurrentThread(startScript);
 		jx_wrapper::test();
 
@@ -190,9 +228,8 @@ namespace engine_ns {
 		while (1) {
 			int uselessEvents;
 
-			int ident = ALooper_pollAll(0, NULL, &uselessEvents, NULL);
-
-			if (ident >= 0) {
+			int ident;
+			while ((ident = ALooper_pollAll(0, NULL, &uselessEvents, NULL)) >= 0) {
 				if (ident == LOOPER_ID_MAIN) {
 					process_cmd(global, engine_handle_cmd);
 				}
