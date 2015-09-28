@@ -9,8 +9,11 @@ public class CustomNativeActivity extends android.app.NativeActivity {
 
 	static {
 		System.loadLibrary("jxcore");
-		System.loadLibrary("opengl-wrapper");
 		System.loadLibrary("jx-wrapper");
+		System.loadLibrary("opengl-wrapper");
+		System.loadLibrary("opensles-wrapper");
+		System.loadLibrary("engine");
+		System.loadLibrary("main");
 	}
 
 	private static void setVisibility(Window window) {

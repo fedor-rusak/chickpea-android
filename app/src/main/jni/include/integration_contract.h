@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+struct global_struct;
+
 struct io_struct {
 
 	int msgread;
@@ -37,6 +39,9 @@ struct native_struct {
 
 	ANativeWindow* pendingWindow;
 
+	void (*process_cmd)(global_struct*, void (*name)(global_struct*, int32_t));
+
+	void (*process_input)(global_struct*, int32_t (*)(global_struct*, AInputEvent*));
 };
 
 struct flags_struct {
@@ -105,25 +110,10 @@ struct global_struct {
 };
 
 /**
- * Dummy function you can call to ensure glue code isn't stripped.
- */
-void function_to_prevent_stripping();
-
-
-/* These must be used by application for processing events */
-
-void process_cmd(global_struct*, void (*)(global_struct*, int32_t));
-
-void process_input(global_struct*, int32_t (*)(global_struct*, AInputEvent*));
-
-
-/**
  * This is the function that application code must implement, representing
  * the main entry to the app.
  */
-namespace engine_ns {
-	void android_main(global_struct*, char*);
-}
+void android_main(global_struct*, char*);
 
 #ifdef __cplusplus
 }

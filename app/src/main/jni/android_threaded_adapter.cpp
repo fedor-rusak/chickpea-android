@@ -11,11 +11,7 @@
 #include "integration_contract.h"
 #include "integration_enums.h"
 
-
-// for native audio
-#include <opensles_wrapper.h>
-
-#include <jx_wrapper.h>
+#include <engine_technical.hpp>
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
@@ -161,10 +157,6 @@ void global_struct_post_exec_cmd(global_struct* global, int8_t cmd) {
 	}
 }
 
-void function_to_prevent_stripping() {
-	//this was used in original to prevent compiler's code removal
-}
-
 static void global_struct_destroy(global_struct* global) {
 	LOGV("global_destroy!");
 	free_saved_state(global);
@@ -218,6 +210,7 @@ int readFileAsset(void* currentAssetManager, const char* filename, char** result
 	}
 }
 
+/* Spawns a thread */
 static global_struct* setupGlobalStruct(
 	ANativeActivity* activity,
 	void* savedState, size_t savedStateSize,
@@ -225,11 +218,17 @@ static global_struct* setupGlobalStruct(
 
 	global_struct* global = (global_struct*)malloc(sizeof(global_struct));
 	memset(global, 0, sizeof(global_struct));
+
+
 	global->native_stuff.activity = activity;
 
 	global->native_stuff.config = AConfiguration_new();
 	AConfiguration_fromAssetManager(global->native_stuff.config, activity->assetManager);
 	print_cur_config(global);
+
+	global->native_stuff.process_cmd = process_cmd;
+	global->native_stuff.process_input = process_input;
+
 
 	int msgpipe[2];
 	if (pipe(msgpipe)) {
@@ -261,17 +260,10 @@ static global_struct* setupGlobalStruct(
 static void* global_struct_entry(void* param) {
 	global_struct* global = (global_struct*) param;
 
-	opensles_wrapper::createEngine();
-	opensles_wrapper::createBufferQueueAudioPlayer();
-	opensles_wrapper::createAssetAudioPlayer(global->native_stuff.activity->assetManager, "sound/background.mp3");
-	opensles_wrapper::setPlayingAssetAudioPlayer(true);
-	//opensles_wrapper::selectClip();
+	char* startScript;
+    readFileAsset((void*)global->native_stuff.activity->assetManager, (char*) "init.js", &startScript);
 
-	char* filename = (char*) "init.js";
-	char* buf;
-    readFileAsset((void*)global->native_stuff.activity->assetManager, filename, &buf);
-
-	engine_ns::android_main(global, buf);
+	android_main(global, startScript);
 
 	global_struct_destroy(global);
 
@@ -280,17 +272,6 @@ static void* global_struct_entry(void* param) {
 
 
 /* Spawns a thread */
-static global_struct* global_struct_create(
-	ANativeActivity* activity,
-	void* savedState,
-	size_t savedStateSize) {
-
-	jx_wrapper::setReadFileParts((void*) activity->assetManager, readFileAsset);
-	jx_wrapper::init();
-	jx_wrapper::test();
-
-	return setupGlobalStruct(activity, savedState, savedStateSize, global_struct_entry);
-}
 
 static void global_struct_write_cmd(global_struct* global, int8_t cmd) {
 	if (write(global->io_stuff.msgwrite, &cmd, sizeof(cmd)) != sizeof(cmd)) {
@@ -354,7 +335,6 @@ static void global_struct_free(struct global_struct* global) {
 static void onDestroy(ANativeActivity* activity) {
 	LOGV("Destroy: %p\n", activity);
 	global_struct_free((global_struct*)activity->instance);
-	opensles_wrapper::shutdown();
 }
 
 static void onStart(ANativeActivity* activity) {
@@ -440,6 +420,9 @@ static void onInputQueueDestroyed(ANativeActivity* activity, AInputQueue* queue)
 /* Starting point */
 void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize) {
 	LOGV("Creating: %p\n", activity);
+
+	chickpea::preInitSetup((void*) activity->assetManager, readFileAsset);
+
 	activity->callbacks->onDestroy = onDestroy;
 	activity->callbacks->onStart = onStart;
 	activity->callbacks->onResume = onResume;
@@ -454,5 +437,5 @@ void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_
 	activity->callbacks->onInputQueueCreated = onInputQueueCreated;
 	activity->callbacks->onInputQueueDestroyed = onInputQueueDestroyed;
 
-	activity->instance = global_struct_create(activity, savedState, savedStateSize);
+	activity->instance = setupGlobalStruct(activity, savedState, savedStateSize, global_struct_entry);
 }
