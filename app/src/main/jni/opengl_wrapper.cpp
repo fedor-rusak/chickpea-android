@@ -3,29 +3,60 @@
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
+#define GLM_FORCE_PURE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 namespace opengl_wrapper {
+
+	static glm::mat4x4 mProjMatrix;
+
+	static glm::mat4x4 mModelViewMatrix = glm::inverse(glm::translate(glm::mat4(), glm::vec3(0,0,3.0)));
+
+	static glm::mat4x4 modelMatrix = glm::translate(glm::mat4(), glm::vec3(0,0.0,0));
+
+	static unsigned char *textureData;
 
 	static char VERTEX_SHADER[] =
 		"#version 100\n"
-		"attribute vec4 vPosition;\n"
+
+		"attribute vec4 a_Position;\n"
+
 		"void main() {\n"
-		"  gl_Position = vPosition;\n"
-		"}\n";
+		"   gl_Position = a_Position;\n"
+		"}\n";   
 
 	static char FRAGMENT_SHADER[] =
 		"#version 100\n"
 		"precision mediump float;\n"
-		"void main() {\n"
-		"  gl_FragColor = vec4(0.2, 1.0, 0.0, 1.0);\n"
+
+		"void main(){\n"
+		"	gl_FragColor = vec4(0.2, 1.0, 0.0, 1.0);\n"
 		"}\n";
 
-	char* getVertexShaderText() {
-		return VERTEX_SHADER;
-	}
+	static char VERTEX_SHADER_WITH_TEXTURE[] =
+		"#version 100\n"
+		"uniform mat4 u_Projection, u_ModelView;\n"
+		"attribute vec4 a_Position;\n"
+		"attribute vec4 a_Color;        \n"
+ 
+		"varying vec4 v_Color;          \n"
 
-	char* getFragmentShaderText() {
-		return FRAGMENT_SHADER;
-	}
+		"void main() {\n"
+		"	v_Color = a_Color;"
+		"	gl_Position = u_Projection * u_ModelView * a_Position;\n"
+		"}\n";
+
+	static char FRAGMENT_SHADER_WITH_TEXTURE[] =
+		"#version 100\n"
+		"precision mediump float;\n"
+		"varying vec4 v_Color;          \n"
+		"void main() {\n"
+		"	gl_FragColor = v_Color;\n"
+		"}\n";
+
 
 	bool checkGlError(const char* funcName) {
 		GLint err = glGetError();
@@ -113,11 +144,6 @@ namespace opengl_wrapper {
 		return program;
 	}
 
-	GLuint createProgramBasic() {
-		return createProgram(getVertexShaderText(), getFragmentShaderText());
-	}
-
-
 	static EGLDisplay display;
 	static EGLSurface surface;
 	static EGLContext context;
@@ -173,13 +199,11 @@ namespace opengl_wrapper {
 		eglQuerySurface(display, surface, EGL_WIDTH, &w);
 		eglQuerySurface(display, surface, EGL_HEIGHT, &h);
 
-		// char str[31];
-		// sprintf(str, "%s %i %i", "Width&Height ", w,h);
-		// LOGZ(str);
+		glViewport(0,0,w,h);
+		mProjMatrix = glm::perspective(45.0f, w*1.0f/h, 0.1f, 100.0f);
 
-		// Initialize GL state.
 		// glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-		glEnable(GL_CULL_FACE);
+		// glEnable(GL_CULL_FACE);
 		// glShadeModel(GL_SMOOTH);
 		glDisable(GL_DEPTH_TEST);
 
@@ -206,13 +230,31 @@ namespace opengl_wrapper {
 
 
 	static GLuint mProgram;
-	static GLuint gvPositionHandle;
 
-	const GLfloat gTriangleVertices[] = { 0.0f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f };
+	const GLfloat gTriangleVertices[] = { -1.0f,-1.0f, 1.0f,-1.0f, -1.0f,1.0f, 1.0f,1.0f };
+
+	const GLfloat gColorValues[] = { 1.0f,1.0f,1.0f, 1.0f,0.5f,0.0f, 1.0f,0.5f,0.0f, 0.0f,0.0f,0.0f };
+
+	void initProgramSimplest() {
+		mProgram = createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+	}
 
 	void initProgram() {
-		mProgram = createProgramBasic();
-		gvPositionHandle = glGetAttribLocation(mProgram, "vPosition");
+		mProgram = createProgram(VERTEX_SHADER_WITH_TEXTURE, FRAGMENT_SHADER_WITH_TEXTURE);
+	}
+
+	void renderSimplest(float color) {
+		glClearColor(1.0-color, 1.0-color, color, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+
+		glUseProgram(mProgram);
+
+		int aPositionHandle = glGetAttribLocation(mProgram, "a_Position");
+		glVertexAttribPointer(aPositionHandle, 2, GL_FLOAT, GL_FALSE, 0, gTriangleVertices);
+		glEnableVertexAttribArray(aPositionHandle);
+
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 	}
 
 	void render(float color) {
@@ -222,9 +264,23 @@ namespace opengl_wrapper {
 
 		glUseProgram(mProgram);
 
+		int uProjection = glGetUniformLocation(mProgram, "u_Projection");
+		glUniformMatrix4fv(uProjection, 1, false, glm::value_ptr(mProjMatrix));
+
+		int uModelView = glGetUniformLocation(mProgram, "u_ModelView");
+		glUniformMatrix4fv(uModelView, 1, false, glm::value_ptr(mModelViewMatrix));
+
+
+		int gvPositionHandle = glGetAttribLocation(mProgram, "a_Position");
 		glVertexAttribPointer(gvPositionHandle, 2, GL_FLOAT, GL_FALSE, 0, gTriangleVertices);
 		glEnableVertexAttribArray(gvPositionHandle);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		int aColorHandle = glGetAttribLocation(mProgram, "a_Color");
+		glVertexAttribPointer(aColorHandle, 3, GL_FLOAT, GL_FALSE, 0, gColorValues);
+		glEnableVertexAttribArray(aColorHandle);
+
+		GLubyte indices[] = {3,0,1, 3,2,0};
+		glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_BYTE, indices);
 	}
 
 	void swapBuffers() {

@@ -10,11 +10,11 @@
 #include <integration_contract.h>
 #include <integration_enums.h>
 
-#include <opengl_wrapper.h>
+#include <engine/opengl_wrapper.h>
 
-#include <jx_wrapper.h>
+#include <engine/jx_wrapper.h>
 
-#include <opensles_wrapper.h>
+#include <engine/opensles_wrapper.h>
 
 /**
  * Our saved state data.
@@ -155,9 +155,9 @@ namespace chickpea {
 
 	void engine_draw_frame(global_struct* global) {
 		engine_struct* engine = (engine_struct*) global->appdata.internal;
-		LOGZ("uuuuuat!");
+
 		if (!engine->animating) {return;}
-		LOGZ("uuuuuat! is dat");
+
 		grey += 0.01f;
 		if (grey > 1.0f - engine->state.value) {
 			grey = 0.0f;
@@ -176,13 +176,13 @@ namespace chickpea {
 		switch (cmd) {
 			case APP_CMD_SAVE_STATE:
 				// The system has asked us to save our current state.  Do so.
-				engine->app->appdata.savedState = malloc(sizeof(struct saved_state));
-				*((struct saved_state*)engine->app->appdata.savedState) = engine->state;
-				engine->app->appdata.savedStateSize = sizeof(struct saved_state);
+				app->appdata.savedState = malloc(sizeof(struct saved_state));
+				*((struct saved_state*)app->appdata.savedState) = engine->state;
+				app->appdata.savedStateSize = sizeof(struct saved_state);
 				break;
 			case APP_CMD_INIT_WINDOW:
 				// The window is being shown, get it ready.
-				if (engine->app->native_stuff.window != NULL) {
+				if (app->native_stuff.window != NULL) {
 					engine_init_display(engine);
 
 					opengl_wrapper::initProgram();
@@ -208,7 +208,6 @@ namespace chickpea {
 		jx_wrapper::initForCurrentThread(startScript);
 		jx_wrapper::test();
 
-		LOGZ("SASDASDASD");
 		opensles_wrapper::createEngine();
 		opensles_wrapper::createBufferQueueAudioPlayer();
 		opensles_wrapper::createAssetAudioPlayer(global->native_stuff.activity->assetManager, "sound/background.mp3");
