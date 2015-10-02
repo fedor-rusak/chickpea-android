@@ -68,7 +68,7 @@ static float trygetAxis(const AInputEvent* event) {
 namespace chickpea {
 
 	static int engine_init_display(engine_struct* engine) {
-		return opengl_wrapper::init(engine->app->native_stuff.window);
+		return opengl_wrapper::init(engine->app);
 	}
 
 	void engine_term_display(engine_struct* engine) {

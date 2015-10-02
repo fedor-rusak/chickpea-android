@@ -42,6 +42,10 @@ struct native_struct {
 	void (*process_cmd)(global_struct*, void (*name)(global_struct*, int32_t));
 
 	void (*process_input)(global_struct*, int32_t (*)(global_struct*, AInputEvent*));
+
+	int (*readStringFile)(void*, const char*, char**);
+	int (*readBinaryFile)(void*, const char*, unsigned char**);
+	void* assetManager;
 };
 
 struct flags_struct {

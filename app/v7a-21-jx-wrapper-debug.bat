@@ -1,1 +1,0 @@
-armv7a-21-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/jx_wrapper.cpp -ljxcore -o src/main/jniLibs/armeabi-v7a/libjx-wrapper.so

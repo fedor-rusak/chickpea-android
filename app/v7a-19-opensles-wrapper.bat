@@ -1,0 +1,1 @@
+armv7a-19-g++ -shared -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/opensles_wrapper.cpp -llog -lEGL -landroid -lOpenSLES -o src/main/jniLibs/armeabi-v7a/libopensles-wrapper.so

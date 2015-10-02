@@ -1,0 +1,1 @@
+%ANDROID_NDK_HOME%\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64\bin\arm-linux-androideabi-gcc --sysroot=%ANDROID_NDK_HOME%\platforms\android-19\arch-arm  %*

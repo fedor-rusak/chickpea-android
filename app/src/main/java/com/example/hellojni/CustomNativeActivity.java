@@ -10,6 +10,7 @@ public class CustomNativeActivity extends android.app.NativeActivity {
 	static {
 		System.loadLibrary("jxcore");
 		System.loadLibrary("jx-wrapper");
+		System.loadLibrary("stlport_shared");
 		System.loadLibrary("opengl-wrapper");
 		System.loadLibrary("opensles-wrapper");
 		System.loadLibrary("engine");

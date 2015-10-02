@@ -9,6 +9,13 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include <integration_contract.h>
+
+#include <android/log.h>
+
 namespace opengl_wrapper {
 
 	static glm::mat4x4 mProjMatrix;
@@ -148,8 +155,23 @@ namespace opengl_wrapper {
 	static EGLSurface surface;
 	static EGLContext context;
 
-	int init(ANativeWindow* window) {
+	static int (*readBinaryFile)(void*, const char*, unsigned char**);
+	static void* assetManager;
+
+	int init(global_struct* global) {
+		readBinaryFile = global->native_stuff.readBinaryFile;
+		assetManager = global->native_stuff.assetManager;
+
+		unsigned char* data;
+		int byteCountToRead = readBinaryFile(assetManager, (char*)"images/fireball.png", &data);
+
+		int w2,h2,n2;
+		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
+
+		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Size %ix%i", w2,h2);
+
 		// initialize OpenGL ES and EGL
+		ANativeWindow* window = global->native_stuff.window;
 
 		/*
 		 * Here specify the attributes of the desired configuration.

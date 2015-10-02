@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include <integration_contract_minimal.h>
 
 namespace opengl_wrapper {
 
@@ -8,7 +9,7 @@ namespace opengl_wrapper {
 
 	void swapBuffers();
 
-	int init(ANativeWindow*);
+	int init(global_struct*);
 
 	void destroy();
 

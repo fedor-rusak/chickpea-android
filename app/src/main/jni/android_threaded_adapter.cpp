@@ -193,7 +193,7 @@ void process_cmd(global_struct* global, void (*onAppCmd)(global_struct*, int32_t
 }
 
 
-int readFileAsset(void* currentAssetManager, const char* filename, char** result) {
+int readStringFileAsset(void* currentAssetManager, const char* filename, char** result) {
 	AAsset *asset = AAssetManager_open((AAssetManager*) currentAssetManager, filename, AASSET_MODE_UNKNOWN);
 	if (asset) {
 		off_t fileSize = AAsset_getLength(asset);
@@ -202,6 +202,22 @@ int readFileAsset(void* currentAssetManager, const char* filename, char** result
 		AAsset_close(asset);
 		((char*) data)[fileSize] = '\0';
 		*result = (char*) data;
+
+		return read_len;
+	}
+	else {
+		return -1;
+	}
+}
+
+int readBinaryFileAsset(void* currentAssetManager, const char* filename, unsigned char** result) {
+	AAsset *asset = AAssetManager_open((AAssetManager*) currentAssetManager, filename, AASSET_MODE_UNKNOWN);
+	if (asset) {
+		off_t fileSize = AAsset_getLength(asset);
+		void* data = malloc(fileSize);
+		int read_len = AAsset_read(asset, data, fileSize);
+		AAsset_close(asset);
+		*result = (unsigned char*) data;
 
 		return read_len;
 	}
@@ -228,6 +244,10 @@ static global_struct* setupGlobalStruct(
 
 	global->native_stuff.process_cmd = process_cmd;
 	global->native_stuff.process_input = process_input;
+	global->native_stuff.readStringFile = readStringFileAsset;
+	global->native_stuff.readBinaryFile = readBinaryFileAsset;
+	global->native_stuff.assetManager = (void*) activity->assetManager;
+
 
 
 	int msgpipe[2];
@@ -261,7 +281,7 @@ static void* global_struct_entry(void* param) {
 	global_struct* global = (global_struct*) param;
 
 	char* startScript;
-    readFileAsset((void*)global->native_stuff.activity->assetManager, (char*) "init.js", &startScript);
+    readStringFileAsset((void*)global->native_stuff.activity->assetManager, (char*) "init.js", &startScript);
 
 	android_main(global, startScript);
 
@@ -421,7 +441,7 @@ static void onInputQueueDestroyed(ANativeActivity* activity, AInputQueue* queue)
 void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize) {
 	LOGV("Creating: %p\n", activity);
 
-	chickpea::preInitSetup((void*) activity->assetManager, readFileAsset);
+	chickpea::preInitSetup((void*) activity->assetManager, readStringFileAsset);
 
 	activity->callbacks->onDestroy = onDestroy;
 	activity->callbacks->onStart = onStart;

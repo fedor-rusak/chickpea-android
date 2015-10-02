@@ -1,1 +1,0 @@
-armv7a-21-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/main.cpp -lengine -o src/main/jniLibs/armeabi-v7a/libmain.so

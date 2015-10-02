@@ -1,1 +1,0 @@
-%ANDROID_NDK_HOME%\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64\bin\arm-linux-androideabi-g++ --sysroot=%ANDROID_NDK_HOME%\platforms\android-21\arch-arm  -I%ANDROID_NDK_HOME%\sources\cxx-stl\llvm-libc++\libcxx\include -L%ANDROID_NDK_HOME%\sources\cxx-stl\llvm-libc++\libs\armeabi-v7a %*

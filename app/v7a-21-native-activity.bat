@@ -1,1 +1,0 @@
-armv7a-21-g++ -shared -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a src/main/jni/android_threaded_adapter.cpp -llog -landroid -lmain -lengine -o src/main/jniLibs/armeabi-v7a/libnative-activity.so
