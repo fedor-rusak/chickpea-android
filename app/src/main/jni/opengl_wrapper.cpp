@@ -47,23 +47,24 @@ namespace opengl_wrapper {
 		"#version 100\n"
 		"uniform mat4 u_Projection, u_ModelView;\n"
 		"attribute vec4 a_Position;\n"
-		"attribute vec4 a_Color;        \n"
+		"attribute vec2 a_TextureUV;\n"
  
-		"varying vec4 v_Color;          \n"
+		"varying vec2 v_TextureCoord;\n"
 
 		"void main() {\n"
-		"	v_Color = a_Color;"
+		"	v_TextureCoord = a_TextureUV;\n"
 		"	gl_Position = u_Projection * u_ModelView * a_Position;\n"
 		"}\n";
 
 	static char FRAGMENT_SHADER_WITH_TEXTURE[] =
 		"#version 100\n"
 		"precision mediump float;\n"
-		"varying vec4 v_Color;          \n"
-		"void main() {\n"
-		"	gl_FragColor = v_Color;\n"
-		"}\n";
+		"uniform sampler2D tex;\n"
 
+		"varying vec2 v_TextureCoord;\n"
+		"void main() {\n"
+		"	gl_FragColor = texture2D(tex, v_TextureCoord);\n"
+		"}\n";
 
 	bool checkGlError(const char* funcName) {
 		GLint err = glGetError();
@@ -92,9 +93,7 @@ namespace opengl_wrapper {
 				GLchar* infoLog = (GLchar*)malloc(infoLogLen);
 				if (infoLog) {
 					glGetShaderInfoLog(shader, infoLogLen, NULL, infoLog);
-					// LOGE("Could not compile %s shader:\n%s\n",
-							// shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment",
-							// infoLog);
+					__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Error %s", infoLog);
 					free(infoLog);
 				}
 			}
@@ -144,7 +143,7 @@ namespace opengl_wrapper {
 			glDeleteProgram(program);
 			program = 0;
 		}
-
+		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Success!");
 	exit:
 		glDeleteShader(vtxShader);
 		glDeleteShader(fragShader);
@@ -154,22 +153,12 @@ namespace opengl_wrapper {
 	static EGLDisplay display;
 	static EGLSurface surface;
 	static EGLContext context;
+	static GLuint textureID;
 
 	static int (*readBinaryFile)(void*, const char*, unsigned char**);
 	static void* assetManager;
 
 	int init(global_struct* global) {
-		readBinaryFile = global->native_stuff.readBinaryFile;
-		assetManager = global->native_stuff.assetManager;
-
-		unsigned char* data;
-		int byteCountToRead = readBinaryFile(assetManager, (char*)"images/fireball.png", &data);
-
-		int w2,h2,n2;
-		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
-
-		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Size %ix%i", w2,h2);
-
 		// initialize OpenGL ES and EGL
 		ANativeWindow* window = global->native_stuff.window;
 
@@ -229,6 +218,31 @@ namespace opengl_wrapper {
 		// glShadeModel(GL_SMOOTH);
 		glDisable(GL_DEPTH_TEST);
 
+
+		readBinaryFile = global->native_stuff.readBinaryFile;
+		assetManager = global->native_stuff.assetManager;
+
+		unsigned char* data;
+		int byteCountToRead = readBinaryFile(assetManager, (char*)"images/fireball.png", &data);
+
+		int w2,h2,n2;
+		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
+
+		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Size %ix%i", w2,h2);
+
+		glGenTextures(1, &textureID);
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Before");
+		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGB,	w2, h2, 0, GL_RGB, GL_UNSIGNED_BYTE,	imageData);
+__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "After");
+		glBindTexture(GL_TEXTURE_2D, 0);
+
 		return 0;
 	}
 
@@ -255,7 +269,7 @@ namespace opengl_wrapper {
 
 	const GLfloat gTriangleVertices[] = { -1.0f,-1.0f, 1.0f,-1.0f, -1.0f,1.0f, 1.0f,1.0f };
 
-	const GLfloat gColorValues[] = { 1.0f,1.0f,1.0f, 1.0f,0.5f,0.0f, 1.0f,0.5f,0.0f, 0.0f,0.0f,0.0f };
+	const GLfloat gTextureUVcoords[] = { 0.0f,1.0f, 1.0f,1.0f, 0.0f,0.0f, 1.0f,0.0f };
 
 	void initProgramSimplest() {
 		mProgram = createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
@@ -297,9 +311,12 @@ namespace opengl_wrapper {
 		glVertexAttribPointer(gvPositionHandle, 2, GL_FLOAT, GL_FALSE, 0, gTriangleVertices);
 		glEnableVertexAttribArray(gvPositionHandle);
 
-		int aColorHandle = glGetAttribLocation(mProgram, "a_Color");
-		glVertexAttribPointer(aColorHandle, 3, GL_FLOAT, GL_FALSE, 0, gColorValues);
-		glEnableVertexAttribArray(aColorHandle);
+		int aUVHandle = glGetAttribLocation(mProgram, "a_TextureUV");
+		glVertexAttribPointer(aUVHandle, 2, GL_FLOAT, GL_FALSE, 0, gTextureUVcoords);
+		glEnableVertexAttribArray(aUVHandle);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureID);
 
 		GLubyte indices[] = {3,0,1, 3,2,0};
 		glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_BYTE, indices);
