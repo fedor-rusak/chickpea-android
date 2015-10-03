@@ -64,6 +64,8 @@ namespace jx_wrapper {
 		JX_Free(&tempValue);
 
 		JX_Loop();
+
+		JX_ForceGC();
 	}
 
 	void destroy() {

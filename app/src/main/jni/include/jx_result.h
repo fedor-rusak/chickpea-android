@@ -21,13 +21,12 @@ enum _JXType {
   RT_Double = 2,
   RT_Boolean = 3,
   RT_String = 4,
-  RT_JSON = 5,
+  RT_Object = 5,
   RT_Buffer = 6,
   RT_Undefined = 7,
   RT_Null = 8,
   RT_Error = 9,
-  RT_Function = 10,
-  RT_Object = 11
+  RT_Function = 10
 };
 
 typedef enum _JXType JXResultType;
@@ -87,6 +86,9 @@ JXCORE_EXTERN(bool)
 JX_IsNull(JXValue *value);
 
 JXCORE_EXTERN(bool)
+JX_IsNullOrUndefined(JXValue *value);
+
+JXCORE_EXTERN(bool)
 JX_IsObject(JXValue *value);
 
 JXCORE_EXTERN(int32_t)
@@ -115,20 +117,45 @@ JX_SetDouble(JXValue *value, const double val);
 JXCORE_EXTERN(void)
 JX_SetBoolean(JXValue *value, const bool val);
 
+#ifdef __cplusplus
+JXCORE_EXTERN(void)
+JX_SetString(JXValue *value, const char *val, const int32_t length = 0);
+#else
 JXCORE_EXTERN(void)
 JX_SetString(JXValue *value, const char *val, const int32_t length);
+#endif
 
+#ifdef __cplusplus
+JXCORE_EXTERN(void)
+JX_SetUCString(JXValue *value, const uint16_t *val, const int32_t length = 0);
+#else
 JXCORE_EXTERN(void)
 JX_SetUCString(JXValue *value, const uint16_t *val, const int32_t length);
+#endif
 
+#ifdef __cplusplus
+JXCORE_EXTERN(void)
+JX_SetJSON(JXValue *value, const char *val, const int32_t length = 0);
+#else
 JXCORE_EXTERN(void)
 JX_SetJSON(JXValue *value, const char *val, const int32_t length);
+#endif
 
+#ifdef __cplusplus
+JXCORE_EXTERN(void)
+JX_SetError(JXValue *value, const char *val, const int32_t length = 0);
+#else
 JXCORE_EXTERN(void)
 JX_SetError(JXValue *value, const char *val, const int32_t length);
+#endif
 
+#ifdef __cplusplus
+JXCORE_EXTERN(void)
+JX_SetBuffer(JXValue *value, const char *val, const int32_t length = 0);
+#else
 JXCORE_EXTERN(void)
 JX_SetBuffer(JXValue *value, const char *val, const int32_t length);
+#endif
 
 JXCORE_EXTERN(void)
 JX_SetUndefined(JXValue *value);
@@ -168,6 +195,18 @@ JX_GetIndexedProperty(JXValue *object, const int index, JXValue *out);
 // if you have a JXValue around, this method brings threadId much faster
 JXCORE_EXTERN(int)
 JX_GetThreadIdByValue(JXValue *value);
+
+JXCORE_EXTERN(void)
+JX_GetGlobalObject(JXValue *out);
+
+JXCORE_EXTERN(void)
+JX_GetProcessObject(JXValue *out);
+
+JXCORE_EXTERN(void)
+JX_WrapObject(JXValue *object, void *ptr);
+
+JXCORE_EXTERN(void *)
+JX_UnwrapObject(JXValue *object);
 
 #ifdef __cplusplus
 }
