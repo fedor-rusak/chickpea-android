@@ -1,3 +1,5 @@
+#include <android/log.h>
+
 #include <jx.h>
 #include <jx_result.h>
 
@@ -64,6 +66,9 @@ namespace jx_wrapper {
 		JX_Free(&tempValue);
 
 		JX_Loop();
+
+		__android_log_print(ANDROID_LOG_INFO, "jxcore-log", "Is it SpiderMonkey? %s!!!", JX_IsSpiderMonkey() ? "Yes" : "No");
+		__android_log_print(ANDROID_LOG_INFO, "jxcore-log", "Is it V8? %s!!!", JX_IsV8() ? "Yes" : "No");
 
 		JX_ForceGC();
 	}
