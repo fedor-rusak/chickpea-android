@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.Window;
 import android.view.View;
 import android.view.KeyEvent;
+import android.content.res.Configuration;
 
 public class CustomNativeActivity extends android.app.NativeActivity {
 
@@ -42,6 +43,13 @@ public class CustomNativeActivity extends android.app.NativeActivity {
 		if (hasFocus) {
 			setVisibility(getWindow());
 		}
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		//should be called on screen size change and orientation change
+		//this can be trigger by OS trying to make only-landscape app to work portrait
+		//with manifest configChanges and doing nothing here I fix sleep button behavior
 	}
 
 	@Override

@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <map>
+#include <cstring>
 
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -155,10 +157,22 @@ namespace opengl_wrapper {
 	static EGLContext context;
 	static GLuint textureID;
 
+	struct compare_struct {
+	    bool operator() (char const *a, char const *b) {
+	        return std::strcmp(a, b) < 0;
+	    }
+	};
+
 	static int (*readBinaryFile)(void*, const char*, unsigned char**);
 	static void* assetManager;
 
 	int init(global_struct* global) {
+	    std::map<const char*, int, compare_struct> textureCache;
+	    textureCache["aa"] = 1;
+	    textureCache["bb"] = 2;
+
+		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Map value: %i", textureCache["aa"]);
+
 		// initialize OpenGL ES and EGL
 		ANativeWindow* window = global->native_stuff.window;
 
@@ -238,9 +252,9 @@ namespace opengl_wrapper {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Before");
+
 		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGB,	w2, h2, 0, GL_RGB, GL_UNSIGNED_BYTE,	imageData);
-__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "After");
+
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		return 0;

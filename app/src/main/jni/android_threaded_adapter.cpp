@@ -17,12 +17,6 @@
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
 #define LOGY(...) ((void)__android_log_print(ANDROID_LOG_INFO, "YYY", __VA_ARGS__))
 
-#ifndef NDEBUG
-#  define LOGV(...)  ((void)__android_log_print(ANDROID_LOG_VERBOSE, "threaded_app", __VA_ARGS__))
-#else
-#  define LOGV(...)  ((void)0)
-#endif
-
 static void free_saved_state(global_struct* global) {
 	pthread_mutex_lock(&global->threading.mutex);
 	if (global->appdata.savedState != NULL) {
@@ -55,7 +49,7 @@ static void print_cur_config(global_struct* global) {
 	AConfiguration_getLanguage(config, lang);
 	AConfiguration_getCountry(config, country);
 
-	LOGV("Config: mcc=%d mnc=%d lang=%c%c cnt=%c%c orien=%d touch=%d dens=%d "
+	LOGI("Config: mcc=%d mnc=%d lang=%c%c cnt=%c%c orien=%d touch=%d dens=%d "
 			"keys=%d nav=%d keysHid=%d navHid=%d sdk=%d size=%d long=%d "
 			"modetype=%d modenight=%d",
 			AConfiguration_getMcc(config),
@@ -80,14 +74,14 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 
 	switch (cmd) {
 		case APP_CMD_INPUT_CHANGED:
-			LOGV("APP_CMD_INPUT_CHANGED\n");
+			LOGI("APP_CMD_INPUT_CHANGED\n");
 			pthread_mutex_lock(&global->threading.mutex);
 			if (io_stuff.inputQueue != NULL) {
 				AInputQueue_detachLooper(io_stuff.inputQueue);
 			}
 			io_stuff.inputQueue = io_stuff.pendingInputQueue;
 			if (io_stuff.inputQueue != NULL) {
-				LOGV("Attaching input queue to looper");
+				LOGI("Attaching input queue to looper");
 				AInputQueue_attachLooper(io_stuff.inputQueue,
 						io_stuff.looper, LOOPER_ID_INPUT, NULL, NULL);
 			}
@@ -96,7 +90,7 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 			break;
 
 		case APP_CMD_INIT_WINDOW:
-			LOGV("APP_CMD_INIT_WINDOW\n");
+			LOGI("APP_CMD_INIT_WINDOW\n");
 			pthread_mutex_lock(&global->threading.mutex);
 			global->native_stuff.window = global->native_stuff.pendingWindow;
 			pthread_cond_broadcast(&global->threading.cond);
@@ -104,7 +98,7 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 			break;
 
 		case APP_CMD_TERM_WINDOW:
-			LOGV("APP_CMD_TERM_WINDOW\n");
+			LOGI("APP_CMD_TERM_WINDOW\n");
 			pthread_cond_broadcast(&global->threading.cond);
 			break;
 
@@ -112,7 +106,7 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 		case APP_CMD_START:
 		case APP_CMD_PAUSE:
 		case APP_CMD_STOP:
-			LOGV("activityState=%d\n", cmd);
+			LOGI("activityState=%d\n", cmd);
 			pthread_mutex_lock(&global->threading.mutex);
 			global->flags.activityState = cmd;
 			pthread_cond_broadcast(&global->threading.cond);
@@ -120,14 +114,14 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 			break;
 
 		case APP_CMD_CONFIG_CHANGED:
-			LOGV("APP_CMD_CONFIG_CHANGED\n");
+			LOGI("APP_CMD_CONFIG_CHANGED\n");
 			AConfiguration_fromAssetManager(global->native_stuff.config,
 					global->native_stuff.activity->assetManager);
 			print_cur_config(global);
 			break;
 
 		case APP_CMD_DESTROY:
-			LOGV("APP_CMD_DESTROY\n");
+			LOGI("APP_CMD_DESTROY\n");
 			global->flags.destroyRequested = 1;
 			break;
 	}
@@ -136,7 +130,7 @@ void global_struct_pre_exec_cmd(global_struct* global, int8_t cmd) {
 void global_struct_post_exec_cmd(global_struct* global, int8_t cmd) {
 	switch (cmd) {
 		case APP_CMD_TERM_WINDOW:
-			LOGV("APP_CMD_TERM_WINDOW\n");
+			LOGI("APP_CMD_TERM_WINDOW\n");
 			pthread_mutex_lock(&global->threading.mutex);
 			global->native_stuff.window = NULL;
 			pthread_cond_broadcast(&global->threading.cond);
@@ -144,7 +138,7 @@ void global_struct_post_exec_cmd(global_struct* global, int8_t cmd) {
 			break;
 
 		case APP_CMD_SAVE_STATE:
-			LOGV("APP_CMD_SAVE_STATE\n");
+			LOGI("APP_CMD_SAVE_STATE\n");
 			pthread_mutex_lock(&global->threading.mutex);
 			global->flags.stateSaved = 1;
 			pthread_cond_broadcast(&global->threading.cond);
@@ -158,7 +152,7 @@ void global_struct_post_exec_cmd(global_struct* global, int8_t cmd) {
 }
 
 static void global_struct_destroy(global_struct* global) {
-	LOGV("global_destroy!");
+	LOGI("global_destroy!");
 	free_saved_state(global);
 	pthread_mutex_lock(&global->threading.mutex);
 	if (global->io_stuff.inputQueue != NULL) {
@@ -174,7 +168,7 @@ static void global_struct_destroy(global_struct* global) {
 void process_input(global_struct* global, int32_t (*onInputEvent)(global_struct*, AInputEvent*)) {
 	AInputEvent* event = NULL;
 	while (AInputQueue_getEvent(global->io_stuff.inputQueue, &event) >= 0) {
-		LOGV("New input event: type=%d\n", AInputEvent_getType(event));
+		LOGI("New input event: type=%d\n", AInputEvent_getType(event));
 		if (AInputQueue_preDispatchEvent(global->io_stuff.inputQueue, event)) {
 			continue;
 		}
@@ -353,17 +347,17 @@ static void global_struct_free(struct global_struct* global) {
 /* Boring callbacks for Android events */
 
 static void onDestroy(ANativeActivity* activity) {
-	LOGV("Destroy: %p\n", activity);
+	LOGI("Destroy: %p\n", activity);
 	global_struct_free((global_struct*)activity->instance);
 }
 
 static void onStart(ANativeActivity* activity) {
-	LOGV("Start: %p\n", activity);
+	LOGI("Start: %p\n", activity);
 	global_struct_set_activity_state((global_struct*)activity->instance, APP_CMD_START);
 }
 
 static void onResume(ANativeActivity* activity) {
-	LOGV("Resume: %p\n", activity);
+	LOGI("Resume: %p\n", activity);
 	global_struct_set_activity_state((global_struct*)activity->instance, APP_CMD_RESUME);
 }
 
@@ -371,7 +365,7 @@ static void* onSaveInstanceState(ANativeActivity* activity, size_t* outLen) {
 	global_struct* global = (global_struct*)activity->instance;
 	void* savedState = NULL;
 
-	LOGV("SaveInstanceState: %p\n", activity);
+	LOGI("SaveInstanceState: %p\n", activity);
 	pthread_mutex_lock(&global->threading.mutex);
 	global->flags.stateSaved = 0;
 	global_struct_write_cmd(global, APP_CMD_SAVE_STATE);
@@ -392,54 +386,54 @@ static void* onSaveInstanceState(ANativeActivity* activity, size_t* outLen) {
 }
 
 static void onPause(ANativeActivity* activity) {
-	LOGV("Pause: %p\n", activity);
+	LOGI("Pause: %p\n", activity);
 	global_struct_set_activity_state((global_struct*)activity->instance, APP_CMD_PAUSE);
 }
 
 static void onStop(ANativeActivity* activity) {
-	LOGV("Stop: %p\n", activity);
+	LOGI("Stop: %p\n", activity);
 	global_struct_set_activity_state((global_struct*)activity->instance, APP_CMD_STOP);
 }
 
 static void onConfigurationChanged(ANativeActivity* activity) {
-	LOGV("ConfigurationChanged: %p\n", activity);
+	LOGI("ConfigurationChanged: %p\n", activity);
 	global_struct_write_cmd((global_struct*) activity->instance, APP_CMD_CONFIG_CHANGED);
 }
 
 static void onLowMemory(ANativeActivity* activity) {
-	LOGV("LowMemory: %p\n", activity);
+	LOGI("LowMemory: %p\n", activity);
 	global_struct_write_cmd((global_struct*)activity->instance, APP_CMD_LOW_MEMORY);
 }
 
 static void onWindowFocusChanged(ANativeActivity* activity, int focused) {
-	LOGV("WindowFocusChanged: %p -- %d\n", activity, focused);
+	LOGI("WindowFocusChanged: %p -- %d\n", activity, focused);
 	global_struct_write_cmd((global_struct*)activity->instance,
 			focused ? APP_CMD_GAINED_FOCUS : APP_CMD_LOST_FOCUS);
 }
 
 static void onNativeWindowCreated(ANativeActivity* activity, ANativeWindow* window) {
-	LOGV("NativeWindowCreated: %p -- %p\n", activity, window);
+	LOGI("NativeWindowCreated: %p -- %p\n", activity, window);
 	global_struct_set_window((global_struct*)activity->instance, window);
 }
 
 static void onNativeWindowDestroyed(ANativeActivity* activity, ANativeWindow* window) {
-	LOGV("NativeWindowDestroyed: %p -- %p\n", activity, window);
+	LOGI("NativeWindowDestroyed: %p -- %p\n", activity, window);
 	global_struct_set_window((global_struct*)activity->instance, NULL);
 }
 
 static void onInputQueueCreated(ANativeActivity* activity, AInputQueue* queue) {
-	LOGV("InputQueueCreated: %p -- %p\n", activity, queue);
+	LOGI("InputQueueCreated: %p -- %p\n", activity, queue);
 	global_struct_set_input((global_struct*)activity->instance, queue);
 }
 
 static void onInputQueueDestroyed(ANativeActivity* activity, AInputQueue* queue) {
-	LOGV("InputQueueDestroyed: %p -- %p\n", activity, queue);
+	LOGI("InputQueueDestroyed: %p -- %p\n", activity, queue);
 	global_struct_set_input((global_struct*)activity->instance, NULL);
 }
 
 /* Starting point */
 void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize) {
-	LOGV("Creating: %p\n", activity);
+	LOGI("Creating: %p\n", activity);
 
 	chickpea::preInitSetup((void*) activity->assetManager, readStringFileAsset);
 
