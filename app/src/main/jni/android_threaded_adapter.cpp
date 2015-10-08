@@ -13,9 +13,8 @@
 
 #include <engine_technical.hpp>
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
-#define LOGY(...) ((void)__android_log_print(ANDROID_LOG_INFO, "YYY", __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_adapter", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_adapter", __VA_ARGS__))
 
 static void free_saved_state(global_struct* global) {
 	pthread_mutex_lock(&global->threading.mutex);

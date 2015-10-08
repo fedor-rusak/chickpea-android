@@ -171,11 +171,11 @@ namespace opensles_wrapper {
 	static SLVolumeItf fdPlayerVolume;
 
 	// create asset audio player
-	bool createAssetAudioPlayer(AAssetManager* mgr, const char* utf8) {
+	bool createAssetAudioPlayer(void* mgr, const char* utf8) {
 	    SLresult result;
 
 	    assert(NULL != mgr);
-	    AAsset* asset = AAssetManager_open(mgr, utf8, AASSET_MODE_UNKNOWN);
+	    AAsset* asset = AAssetManager_open((AAssetManager*) mgr, utf8, AASSET_MODE_UNKNOWN);
 
 
 	    // the asset might not be found

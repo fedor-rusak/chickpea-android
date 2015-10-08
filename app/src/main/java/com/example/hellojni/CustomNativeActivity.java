@@ -5,6 +5,7 @@ import android.view.Window;
 import android.view.View;
 import android.view.KeyEvent;
 import android.content.res.Configuration;
+import android.util.Log;
 
 public class CustomNativeActivity extends android.app.NativeActivity {
 
@@ -28,13 +29,13 @@ public class CustomNativeActivity extends android.app.NativeActivity {
 			| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 	}
 
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 	
 		setVisibility(getWindow());
 	}
-
 
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
@@ -47,14 +48,12 @@ public class CustomNativeActivity extends android.app.NativeActivity {
 
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
-		//should be called on screen size change and orientation change
-		//this can be trigger by OS trying to make only-landscape app to work portrait
-		//with manifest configChanges and doing nothing here I fix sleep button behavior
+		super.onConfigurationChanged(newConfig);
 	}
 
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
-		android.util.Log.d("ZZZ", "source " + event.getSource());
+		Log.d("ZZZ", "source " + event.getSource());
 
 		if (event.getSource() != KeyEvent.KEYCODE_TV_MEDIA_CONTEXT_MENU && event.getKeyCode() == 4) {
 			return false;

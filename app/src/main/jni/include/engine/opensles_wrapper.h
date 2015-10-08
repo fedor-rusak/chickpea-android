@@ -3,7 +3,7 @@
 namespace opensles_wrapper {
 	void createEngine();
 	void createBufferQueueAudioPlayer();
-	void createAssetAudioPlayer(AAssetManager*, const char*);
+	void createAssetAudioPlayer(void*, const char*);
 	void setPlayingAssetAudioPlayer(bool);
 	void selectClip();
 

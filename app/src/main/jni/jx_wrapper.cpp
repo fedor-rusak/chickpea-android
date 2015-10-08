@@ -1,5 +1,8 @@
 #include <android/log.h>
 
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "jx_wrapper", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "jx_wrapper", __VA_ARGS__))
+
 #include <jx.h>
 #include <jx_result.h>
 
@@ -29,6 +32,23 @@ namespace jx_wrapper {
 		JX_SetError(&results[argc], err, strlen(err));
 	}
 
+
+	void (*cacheTextureCallback)(char*, char*);
+
+	void cacheTexture(JXValue *results, int argc) {
+		char* lable = (char*) JX_GetString(&results[0]);
+		char* path = (char*) JX_GetString(&results[1]);
+
+		cacheTextureCallback(lable, path);
+	}
+
+	void setCacheTextureCallback(void (*callback)(char*, char*)) {
+		cacheTextureCallback = callback;
+
+		JX_DefineExtension("cacheTexture", cacheTexture);
+	}
+
+
 	static bool JXCoreInitialized = false;
 
 	void initForCurrentThread(char* startScript) {
@@ -49,6 +69,13 @@ namespace jx_wrapper {
 		return 0;
 	}
 
+	void evaluate(char* script) {
+		JXValue tempValue;
+		JX_Evaluate(script,
+				"evaluateScript", &tempValue);
+		JX_Free(&tempValue);
+	}
+
 	void test() {
 		JXValue tempValue, tempProperty;
 		JX_Evaluate(
@@ -67,8 +94,8 @@ namespace jx_wrapper {
 
 		JX_Loop();
 
-		__android_log_print(ANDROID_LOG_INFO, "jxcore-log", "Is it SpiderMonkey? %s!!!", JX_IsSpiderMonkey() ? "Yes" : "No");
-		__android_log_print(ANDROID_LOG_INFO, "jxcore-log", "Is it V8? %s!!!", JX_IsV8() ? "Yes" : "No");
+		LOGI("Is it SpiderMonkey? %s!!!", JX_IsSpiderMonkey() ? "Yes" : "No");
+		LOGI("Is it V8? %s!!!", JX_IsV8() ? "Yes" : "No");
 
 		JX_ForceGC();
 	}

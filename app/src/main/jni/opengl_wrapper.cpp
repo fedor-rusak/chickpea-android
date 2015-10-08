@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <map>
-#include <cstring>
+#include <string>
 
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -17,6 +17,9 @@
 #include <integration_contract.h>
 
 #include <android/log.h>
+
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "opengl_wrapper", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", __VA_ARGS__))
 
 namespace opengl_wrapper {
 
@@ -95,7 +98,7 @@ namespace opengl_wrapper {
 				GLchar* infoLog = (GLchar*)malloc(infoLogLen);
 				if (infoLog) {
 					glGetShaderInfoLog(shader, infoLogLen, NULL, infoLog);
-					__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Error %s", infoLog);
+					LOGE("Error %s", infoLog);
 					free(infoLog);
 				}
 			}
@@ -145,7 +148,7 @@ namespace opengl_wrapper {
 			glDeleteProgram(program);
 			program = 0;
 		}
-		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Success!");
+		LOGI("Success!");
 	exit:
 		glDeleteShader(vtxShader);
 		glDeleteShader(fragShader);
@@ -157,22 +160,39 @@ namespace opengl_wrapper {
 	static EGLContext context;
 	static GLuint textureID;
 
-	struct compare_struct {
-	    bool operator() (char const *a, char const *b) {
-	        return std::strcmp(a, b) < 0;
-	    }
-	};
+	std::map<std::string, int> textureCache;
 
 	static int (*readBinaryFile)(void*, const char*, unsigned char**);
 	static void* assetManager;
 
+	void cacheTexture(char* lable, char* path) {
+		unsigned char* data;
+		int byteCountToRead = readBinaryFile(assetManager, path, &data);
+
+		int w2,h2,n2;
+		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
+
+		LOGI("Size of %s is %ix%i", lable, w2,h2);
+
+		glGenTextures(1, &textureID);
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGB,	w2, h2, 0, GL_RGB, GL_UNSIGNED_BYTE,	imageData);
+		stbi_image_free(imageData);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+
+		textureCache[lable]  = textureID;		
+	}
+
 	int init(global_struct* global) {
-	    std::map<const char*, int, compare_struct> textureCache;
-	    textureCache["aa"] = 1;
-	    textureCache["bb"] = 2;
-
-		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Map value: %i", textureCache["aa"]);
-
 		// initialize OpenGL ES and EGL
 		ANativeWindow* window = global->native_stuff.window;
 
@@ -223,8 +243,13 @@ namespace opengl_wrapper {
 
 		eglQuerySurface(display, surface, EGL_WIDTH, &w);
 		eglQuerySurface(display, surface, EGL_HEIGHT, &h);
-
+		LOGI("Dimenions %ix%i", w, h);
 		glViewport(0,0,w,h);
+		if (h > w) {
+			int temp = h;
+			h = w;
+			w = temp;
+		}
 		mProjMatrix = glm::perspective(45.0f, w*1.0f/h, 0.1f, 100.0f);
 
 		// glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
@@ -235,27 +260,6 @@ namespace opengl_wrapper {
 
 		readBinaryFile = global->native_stuff.readBinaryFile;
 		assetManager = global->native_stuff.assetManager;
-
-		unsigned char* data;
-		int byteCountToRead = readBinaryFile(assetManager, (char*)"images/fireball.png", &data);
-
-		int w2,h2,n2;
-		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
-
-		__android_log_print(ANDROID_LOG_ERROR, "opengl_wrapper", "Size %ix%i", w2,h2);
-
-		glGenTextures(1, &textureID);
-
-		glBindTexture(GL_TEXTURE_2D, textureID);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGB,	w2, h2, 0, GL_RGB, GL_UNSIGNED_BYTE,	imageData);
-
-		glBindTexture(GL_TEXTURE_2D, 0);
 
 		return 0;
 	}
@@ -330,7 +334,7 @@ namespace opengl_wrapper {
 		glEnableVertexAttribArray(aUVHandle);
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textureID);
+		glBindTexture(GL_TEXTURE_2D, textureCache["explosion"]);
 
 		GLubyte indices[] = {3,0,1, 3,2,0};
 		glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_BYTE, indices);

@@ -1,9 +1,7 @@
 #include <android/log.h>
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
-#define LOGZ(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ZZZ", __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ZZZ", __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "chickpea", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_INFO, "chickpea", __VA_ARGS__))
 
 #include <stdio.h>
 
@@ -58,7 +56,7 @@ static float trygetAxis(const AInputEvent* event) {
 				pos[1] = AMotionEvent_getAxisValue(event, AXIS_HAT_Y, 0);
 			break;
 		}
-		LOGZ("DATA%i: %f, %f", i, pos[0], pos[1]);
+		LOGI("DATA%i: %f, %f", i, pos[0], pos[1]);
 	}
 
 	return result;
@@ -67,15 +65,12 @@ static float trygetAxis(const AInputEvent* event) {
 
 namespace chickpea {
 
-	static int engine_init_display(engine_struct* engine) {
+	static int init_display(engine_struct* engine) {
 		return opengl_wrapper::init(engine->app);
 	}
 
-	void engine_term_display(engine_struct* engine) {
+	static void terminate_display(engine_struct* engine) {
 		opengl_wrapper::destroy();
-
-		jx_wrapper::destroy();
-
 		engine->animating = 0;
 	}
 
@@ -100,19 +95,19 @@ namespace chickpea {
 							int index = 0;
 							engine->state.x = AMotionEvent_getX(event, index);
 							engine->state.y = AMotionEvent_getY(event, index);
-							LOGZ("x %i, y %i", engine->state.x, engine->state.y);
+							LOGI("x %i, y %i", engine->state.x, engine->state.y);
 
-							LOGZ("DOWN");
+							LOGI("DOWN");
 						}
 						break;
 						case AMOTION_EVENT_ACTION_POINTER_DOWN: {
 							activeId = AMotionEvent_getPointerId(event, pointerIndex);
-							LOGZ("POINTER DOWN");
+							LOGI("POINTER DOWN");
 						}
 						break;
 						case AMOTION_EVENT_ACTION_UP:
 							activeId = -1;
-							LOGZ("UP");
+							LOGI("UP");
 						break;
 						case AMOTION_EVENT_ACTION_POINTER_UP: {
 							int pointerId = AMotionEvent_getPointerId(event, pointerIndex);
@@ -122,7 +117,7 @@ namespace chickpea {
 
 								activeId = AMotionEvent_getPointerId(event, newPointerIndex);
 							}
-							LOGZ("POINTER UP");
+							LOGI("POINTER UP");
 						}
 						break;
 						case AMOTION_EVENT_ACTION_MOVE: {
@@ -130,9 +125,9 @@ namespace chickpea {
 								int index = i;
 								engine->state.x = AMotionEvent_getX(event, index);
 								engine->state.y = AMotionEvent_getY(event, index);
-								LOGZ("index: %i, id: %i, x: %i, y: %i", i, AMotionEvent_getPointerId( event, i ), engine->state.x, engine->state.y);
+								LOGI("index: %i, id: %i, x: %i, y: %i", i, AMotionEvent_getPointerId( event, i ), engine->state.x, engine->state.y);
 							}
-							LOGZ("MOVE", pointerIndex);
+							LOGI("MOVE", pointerIndex);
 						}
 						break;
 					}
@@ -142,10 +137,10 @@ namespace chickpea {
 			return 1;
 		}
 		else {
-			LOGZ("EventType is %i", AInputEvent_getType(event));
-			LOGZ("Source is %i", AInputEvent_getSource(event));
-			LOGZ("Action is %i",AKeyEvent_getAction(event));
-			LOGZ("KeyCode is %i",AKeyEvent_getKeyCode(event));
+			LOGI("EventType is %i", AInputEvent_getType(event));
+			LOGI("Source is %i", AInputEvent_getSource(event));
+			LOGI("Action is %i",AKeyEvent_getAction(event));
+			LOGI("KeyCode is %i",AKeyEvent_getKeyCode(event));
 		}
 		return 0;
 	}
@@ -183,19 +178,43 @@ namespace chickpea {
 			case APP_CMD_INIT_WINDOW:
 				// The window is being shown, get it ready.
 				if (app->native_stuff.window != NULL) {
-					engine_init_display(engine);
+					init_display(engine);
 
 					opengl_wrapper::initProgram();
 
+					jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
+
+					jx_wrapper::evaluate((char*)"global.cacheTextures();");
+
 					engine->animating = 1;
-					engine_draw_frame(app);
+
+					opensles_wrapper::setPlayingAssetAudioPlayer(true);
 				}
 				break;
 			case APP_CMD_TERM_WINDOW:
 				// The window is being hidden or closed, clean it up.
-				engine_term_display(engine);
+				terminate_display(engine);
+				opensles_wrapper::setPlayingAssetAudioPlayer(false);
 				break;
 			case APP_CMD_GAINED_FOCUS:
+				break;
+			case APP_CMD_PAUSE:
+				opensles_wrapper::setPlayingAssetAudioPlayer(false);
+				break;
+			case APP_CMD_RESUME:
+				opensles_wrapper::setPlayingAssetAudioPlayer(true);
+				break;
+			case APP_CMD_CONFIG_CHANGED:
+				engine->animating = 0;
+				terminate_display(engine);
+				init_display(engine);
+
+				opengl_wrapper::initProgram();
+
+				jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
+				jx_wrapper::evaluate((char*)"global.cacheTextures();");
+				engine->animating = 1;
+
 				break;
 			case APP_CMD_LOST_FOCUS:
 				engine->animating = 0;
@@ -210,7 +229,7 @@ namespace chickpea {
 
 		opensles_wrapper::createEngine();
 		opensles_wrapper::createBufferQueueAudioPlayer();
-		opensles_wrapper::createAssetAudioPlayer(global->native_stuff.activity->assetManager, "sound/background.mp3");
+		opensles_wrapper::createAssetAudioPlayer(global->native_stuff.assetManager, "sound/background.mp3");
 		opensles_wrapper::setPlayingAssetAudioPlayer(true);
 		//opensles_wrapper::selectClip();
 
@@ -256,7 +275,8 @@ namespace chickpea {
 	}
 
 	void destroy(global_struct* global) {
-		engine_term_display((engine_struct*) global->appdata.internal);
+		terminate_display((engine_struct*) global->appdata.internal);
+		jx_wrapper::destroy();
 		opensles_wrapper::shutdown();
 		free((engine_struct*) global->appdata.internal);
 	}

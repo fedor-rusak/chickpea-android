@@ -43,6 +43,8 @@ try {
 	registerAssets();
 
 	global.require = require;
+
+	require("/init.js")(global);
 }
 catch(e) {
 	console.log("init.js error: "+e);

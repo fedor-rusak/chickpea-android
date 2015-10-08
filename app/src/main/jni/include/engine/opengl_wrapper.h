@@ -7,6 +7,8 @@ namespace opengl_wrapper {
 
 	uint createProgramBasic();
 
+	void cacheTexture(char*, char*);
+
 	void swapBuffers();
 
 	int init(global_struct*);
