@@ -33,6 +33,7 @@ function init(global) {
 			process.natives.setCamera(0.0, 0.0, 5.0);
 			global.cameraSet = true;
 		}
+		console.log(Date.now());
 		process.natives.clearScreen(0.1, 0.2, 0.3);
 		process.natives.render("explosion", -1.0, -1.0, 0.0);
 		process.natives.render("explosion", 1.0, 1.0, 0.0);
