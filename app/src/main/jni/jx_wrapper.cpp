@@ -6,6 +6,8 @@
 #include <jx.h>
 #include <jx_result.h>
 
+#include <string>
+
 namespace jx_wrapper {
 
 	void* assetManager;
@@ -47,6 +49,94 @@ namespace jx_wrapper {
 
 		JX_DefineExtension("cacheTexture", cacheTexture);
 	}
+
+	void (*renderCallback)(char*, float, float, float);
+
+	void render(JXValue *results, int argc) {
+		char* label = (char*) JX_GetString(&results[0]);
+
+		float offsetX = 0;
+		float offsetY = 0;
+		float offsetZ = 0;
+
+		if (argc > 1)
+			offsetX = (float) JX_GetDouble(&results[1]);
+
+		if (argc > 2)
+			offsetY = (float) JX_GetDouble(&results[2]);
+
+		if (argc > 3)
+			offsetZ = (float) JX_GetDouble(&results[3]);
+
+		renderCallback(label, offsetX, offsetY, offsetZ);
+	}
+
+	void setRenderCallback(void (*callback)(char*, float, float, float)) {
+		renderCallback = callback;
+		JX_DefineExtension("render", render);
+	}
+
+	void (*setCameraCallback)(float, float, float);
+
+	void setCamera(JXValue *results, int argc) {
+		float offsetX = 0;
+		float offsetY = 0;
+		float offsetZ = 0;
+
+		if (argc > 0)
+			offsetX = (float) JX_GetDouble(&results[0]);
+
+		if (argc > 1)
+			offsetY = (float) JX_GetDouble(&results[1]);
+
+		if (argc > 2)
+			offsetZ = (float) JX_GetDouble(&results[2]);
+
+		setCameraCallback(offsetX, offsetY, offsetZ);
+	}
+
+	void setSetCameraCallback(void (*callback)(float, float, float)) {
+		setCameraCallback = callback;
+		JX_DefineExtension("setCamera", setCamera);
+	}
+
+	void (*getScreenDimensionsCallback)(int*, int*);
+
+	void getScreenDimensions(JXValue *results, int argc) {
+		int width, height;
+		getScreenDimensionsCallback(&width, &height);
+
+		char data[40];
+		sprintf(data, "{\"width\": %i, \"height\": %i}", width, height);
+
+		std::string result = "";
+		result += data;		
+
+		const char* str = result.c_str();
+
+		JX_SetJSON(&results[argc], str, strlen(str));
+	}
+
+	void setGetScreenDimensionsCallback(void (*callback)(int*, int*)) {
+		getScreenDimensionsCallback = callback;
+		JX_DefineExtension("getScreenDimensions", getScreenDimensions);
+	}
+
+	void (*clearScreenCallback)(float, float, float);
+
+	void clearScreen(JXValue *results, int argc) {
+		float colorR = (float) JX_GetDouble(&results[0]);
+		float colorG = (float) JX_GetDouble(&results[1]);
+		float colorB = (float) JX_GetDouble(&results[2]);
+
+		clearScreenCallback(colorR, colorG, colorB);
+	}
+
+	void setClearScreenCallback(void (*callback)(float, float, float)) {
+		clearScreenCallback = callback;
+		JX_DefineExtension("clearScreen", clearScreen);
+	}
+
 
 
 	static bool JXCoreInitialized = false;

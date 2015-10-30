@@ -25,10 +25,6 @@ namespace opengl_wrapper {
 
 	static glm::mat4x4 mProjMatrix;
 
-	static glm::mat4x4 mModelViewMatrix = glm::inverse(glm::translate(glm::mat4(), glm::vec3(0,0,3.0)));
-
-	static glm::mat4x4 modelMatrix = glm::translate(glm::mat4(), glm::vec3(0,0.0,0));
-
 	static unsigned char *textureData;
 
 	static char VERTEX_SHADER[] =
@@ -71,7 +67,7 @@ namespace opengl_wrapper {
 		"	gl_FragColor = texture2D(tex, v_TextureCoord);\n"
 		"}\n";
 
-	bool checkGlError(const char* funcName) {
+	static bool checkGlError(const char* funcName) {
 		GLint err = glGetError();
 		if (err != GL_NO_ERROR) {
 			// LOGE("GL error after %s(): 0x%08x\n", funcName, err);
@@ -80,7 +76,7 @@ namespace opengl_wrapper {
 		return false;
 	}
 
-	GLuint createShader(GLenum shaderType, const char* src) {
+	static GLuint createShader(GLenum shaderType, const char* src) {
 		GLuint shader = glCreateShader(shaderType);
 		if (!shader) {
 			checkGlError("glCreateShader");
@@ -109,7 +105,7 @@ namespace opengl_wrapper {
 		return shader;
 	}
 
-	GLuint createProgram(const char* vtxSrc, const char* fragSrc) {
+	static GLuint createProgram(const char* vtxSrc, const char* fragSrc) {
 		GLuint vtxShader = 0;
 		GLuint fragShader = 0;
 		GLuint program = 0;
@@ -160,19 +156,19 @@ namespace opengl_wrapper {
 	static EGLContext context;
 	static GLuint textureID;
 
-	std::map<std::string, int> textureCache;
+	static std::map<std::string, int> textureCache;
 
 	static int (*readBinaryFile)(void*, const char*, unsigned char**);
 	static void* assetManager;
 
-	void cacheTexture(char* lable, char* path) {
+	void cacheTexture(char* label, char* path) {
 		unsigned char* data;
 		int byteCountToRead = readBinaryFile(assetManager, path, &data);
 
 		int w2,h2,n2;
 		unsigned char* imageData = stbi_load_from_memory(data, byteCountToRead,&w2,&h2,&n2, 0);
 
-		LOGI("Size of %s is %ix%i", lable, w2,h2);
+		LOGI("Size of %s is %ix%i", label, w2,h2);
 
 		glGenTextures(1, &textureID);
 
@@ -189,8 +185,10 @@ namespace opengl_wrapper {
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 
-		textureCache[lable]  = textureID;		
+		textureCache[label]  = textureID;		
 	}
+
+	static EGLint w, h;
 
 	int init(global_struct* global) {
 		// initialize OpenGL ES and EGL
@@ -208,7 +206,7 @@ namespace opengl_wrapper {
 				EGL_RED_SIZE, 8,
 				EGL_NONE
 		};
-		EGLint w, h, dummy, format;
+		EGLint dummy, format;
 		EGLint numConfigs;
 		EGLConfig config;
 
@@ -244,12 +242,14 @@ namespace opengl_wrapper {
 		eglQuerySurface(display, surface, EGL_WIDTH, &w);
 		eglQuerySurface(display, surface, EGL_HEIGHT, &h);
 		LOGI("Dimenions %ix%i", w, h);
-		glViewport(0,0,w,h);
+		// glViewport(0,0,w,h);
 		if (h > w) {
 			int temp = h;
 			h = w;
 			w = temp;
 		}
+		glViewport(0,0,w,h);
+		LOGI("Dimenions %ix%i", w, h);
 		mProjMatrix = glm::perspective(45.0f, w*1.0f/h, 0.1f, 100.0f);
 
 		// glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
@@ -285,9 +285,9 @@ namespace opengl_wrapper {
 
 	static GLuint mProgram;
 
-	const GLfloat gTriangleVertices[] = { -1.0f,-1.0f, 1.0f,-1.0f, -1.0f,1.0f, 1.0f,1.0f };
+	static const GLfloat gTriangleVertices[] = { -1.0f,-1.0f, 1.0f,-1.0f, -1.0f,1.0f, 1.0f,1.0f };
 
-	const GLfloat gTextureUVcoords[] = { 0.0f,1.0f, 1.0f,1.0f, 0.0f,0.0f, 1.0f,0.0f };
+	static const GLfloat gTextureUVcoords[] = { 0.0f,1.0f, 1.0f,1.0f, 0.0f,0.0f, 1.0f,0.0f };
 
 	void initProgramSimplest() {
 		mProgram = createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
@@ -311,10 +311,25 @@ namespace opengl_wrapper {
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 	}
 
-	void render(float color) {
-		glClearColor(1.0-color, 1.0-color, color, 1.0f);
+	void clearScreen(float colorR, float colorG, float colorB) {
+		glClearColor(colorR, colorG, colorB, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+	}
 
+	static glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(0,1,0));
+
+	void setCamera(float offsetX, float offsetY, float offsetZ) {
+		viewMatrix = glm::lookAt(glm::vec3(offsetX,offsetY,offsetZ), glm::vec3(0,0,0), glm::vec3(0,1,0));
+	}
+
+	void getScreenDimensions(int* width, int* height) {
+		*width = w;
+		*height = h;
+	}
+
+	void render(char* textureLabel, float offsetX, float offsetY, float offsetZ) {
+		glm::mat4 modelMatrix = glm::translate(glm::mat4(), glm::vec3(offsetX, offsetY, offsetZ));
+		glm::mat4 mModelViewMatrix = viewMatrix * modelMatrix;
 
 		glUseProgram(mProgram);
 
@@ -334,7 +349,7 @@ namespace opengl_wrapper {
 		glEnableVertexAttribArray(aUVHandle);
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textureCache["explosion"]);
+		glBindTexture(GL_TEXTURE_2D, textureCache[textureLabel]);
 
 		GLubyte indices[] = {3,0,1, 3,2,0};
 		glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_BYTE, indices);

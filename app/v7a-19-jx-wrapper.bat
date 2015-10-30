@@ -1,1 +1,1 @@
-armv7a-19-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a -shared src/main/jni/jx_wrapper.cpp -ljxcore -llog -o src/main/jniLibs/armeabi-v7a/libjx-wrapper.so
+armv7a-19-g++ -Isrc/main/jni/include -Lsrc/main/jniLibs/armeabi-v7a -shared src/main/jni/jx_wrapper.cpp -ljxcore -llog -lgnustl_shared -o src/main/jniLibs/armeabi-v7a/libjx-wrapper.so

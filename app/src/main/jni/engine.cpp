@@ -97,20 +97,41 @@ namespace chickpea {
 							engine->state.y = AMotionEvent_getY(event, index);
 							LOGI("x %i, y %i", engine->state.x, engine->state.y);
 
+							char inputScript[50];
+							sprintf(inputScript, "global.addInput(['pressed', %i, %i, %i]);", activeId, engine->state.x, engine->state.y);
+							jx_wrapper::evaluate(inputScript);
+
 							LOGI("DOWN");
+						}
+						break;
+						case AMOTION_EVENT_ACTION_UP: {
+							char inputScript[50];
+							sprintf(inputScript, "global.addInput(['release', %i]);", activeId);
+							jx_wrapper::evaluate(inputScript);
+
+							activeId = -1;
+							LOGI("UP");
 						}
 						break;
 						case AMOTION_EVENT_ACTION_POINTER_DOWN: {
 							activeId = AMotionEvent_getPointerId(event, pointerIndex);
+							engine->state.x = AMotionEvent_getX(event, pointerIndex);
+							engine->state.y = AMotionEvent_getY(event, pointerIndex);
+							LOGI("index: %i, id: %i, x: %i, y: %i", pointerIndex, activeId, engine->state.x, engine->state.y);
+
+							char inputScript[50];
+							sprintf(inputScript, "global.addInput(['pressed', %i, %i, %i]);", activeId, engine->state.x, engine->state.y);
+							jx_wrapper::evaluate(inputScript);
+
 							LOGI("POINTER DOWN");
 						}
 						break;
-						case AMOTION_EVENT_ACTION_UP:
-							activeId = -1;
-							LOGI("UP");
-						break;
 						case AMOTION_EVENT_ACTION_POINTER_UP: {
 							int pointerId = AMotionEvent_getPointerId(event, pointerIndex);
+
+							char inputScript[50];
+							sprintf(inputScript, "global.addInput(['release', %i]);", pointerId);
+							jx_wrapper::evaluate(inputScript);
 
 							if (pointerId == activeId) {
 								int newPointerIndex = pointerIndex == 0 ? 1 : 0;
@@ -126,6 +147,10 @@ namespace chickpea {
 								engine->state.x = AMotionEvent_getX(event, index);
 								engine->state.y = AMotionEvent_getY(event, index);
 								LOGI("index: %i, id: %i, x: %i, y: %i", i, AMotionEvent_getPointerId( event, i ), engine->state.x, engine->state.y);
+
+								char inputScript[50];
+								sprintf(inputScript, "global.addInput(['move', %i, %i, %i]);", AMotionEvent_getPointerId(event, i), engine->state.x, engine->state.y);
+								jx_wrapper::evaluate(inputScript);
 							}
 							LOGI("MOVE", pointerIndex);
 						}
@@ -146,19 +171,12 @@ namespace chickpea {
 	}
 
 
-	static float grey = 0.0;
-
 	void engine_draw_frame(global_struct* global) {
 		engine_struct* engine = (engine_struct*) global->appdata.internal;
 
 		if (!engine->animating) {return;}
 
-		grey += 0.01f;
-		if (grey > 1.0f - engine->state.value) {
-			grey = 0.0f;
-		}
-
-		opengl_wrapper::render(grey);
+		jx_wrapper::evaluate((char*)"global.render();");
 
 		opengl_wrapper::swapBuffers();
 	}
@@ -182,9 +200,12 @@ namespace chickpea {
 
 					opengl_wrapper::initProgram();
 
+					jx_wrapper::setRenderCallback(opengl_wrapper::render);
+					jx_wrapper::setSetCameraCallback(opengl_wrapper::setCamera);
+					jx_wrapper::setGetScreenDimensionsCallback(opengl_wrapper::getScreenDimensions);
+					jx_wrapper::setClearScreenCallback(opengl_wrapper::clearScreen);
 					jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
-
-					jx_wrapper::evaluate((char*)"global.cacheTextures();");
+					jx_wrapper::evaluate((char*)"global.cacheTexturesInit();");
 
 					engine->animating = 1;
 
@@ -211,8 +232,12 @@ namespace chickpea {
 
 				opengl_wrapper::initProgram();
 
+				jx_wrapper::setRenderCallback(opengl_wrapper::render);
+				jx_wrapper::setSetCameraCallback(opengl_wrapper::setCamera);
+				jx_wrapper::setGetScreenDimensionsCallback(opengl_wrapper::getScreenDimensions);
+				jx_wrapper::setClearScreenCallback(opengl_wrapper::clearScreen);
 				jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
-				jx_wrapper::evaluate((char*)"global.cacheTextures();");
+				jx_wrapper::evaluate((char*)"global.cacheTexturesInit();");
 				engine->animating = 1;
 
 				break;
@@ -266,6 +291,8 @@ namespace chickpea {
 				global->native_stuff.process_input(global, engine_handle_input);
 			}
 		}
+
+		jx_wrapper::evaluate((char*)"global.processInput();");
 	}
 
 	void preInitSetup(void* assetManager, int (*readFile)(void*, const char*, char**)) {

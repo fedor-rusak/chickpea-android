@@ -9,6 +9,14 @@ namespace opengl_wrapper {
 
 	void cacheTexture(char*, char*);
 
+	void render(char*, float, float, float);
+
+	void clearScreen(float, float, float);
+
+	void setCamera(float, float, float);
+
+	void getScreenDimensions(int*, int*);
+
 	void swapBuffers();
 
 	int init(global_struct*);
@@ -16,7 +24,5 @@ namespace opengl_wrapper {
 	void destroy();
 
 	void initProgram();
-
-	void render(float);
 
 }
