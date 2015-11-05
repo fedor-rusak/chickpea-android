@@ -137,6 +137,31 @@ namespace jx_wrapper {
 		JX_DefineExtension("clearScreen", clearScreen);
 	}
 
+	void (*unprojectCallback)(int, int, float*, float*);
+
+	void unproject(JXValue *results, int argc) {
+		int screenX = JX_GetInt32(&results[0]);
+		int screenY = JX_GetInt32(&results[1]);
+
+		float worldX, worldY;
+		unprojectCallback(screenX, screenY, &worldX, &worldY);
+
+		char data[30];
+		sprintf(data, "[%f, %f]", worldX, worldY);
+
+		std::string result = "";
+		result += data;		
+
+		const char* str = result.c_str();
+
+		JX_SetJSON(&results[argc], str, strlen(str));
+	}
+
+	void setUnprojectCallback(void (*callback)(int, int, float*, float*)) {
+		unprojectCallback = callback;
+		JX_DefineExtension("unproject", unproject);
+	}
+
 
 
 	static bool JXCoreInitialized = false;

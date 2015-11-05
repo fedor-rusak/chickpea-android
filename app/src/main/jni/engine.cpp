@@ -93,15 +93,18 @@ namespace chickpea {
 							activeId = AMotionEvent_getPointerId(event, 0);
 
 							int index = 0;
-							engine->state.x = AMotionEvent_getX(event, index);
-							engine->state.y = AMotionEvent_getY(event, index);
+							float precisionX = AMotionEvent_getXPrecision(event);
+							float precisionY = AMotionEvent_getYPrecision(event);
+
+							engine->state.x = AMotionEvent_getX(event, index) / precisionX;
+							engine->state.y = AMotionEvent_getY(event, index) / precisionY;
 							LOGI("x %i, y %i", engine->state.x, engine->state.y);
 
 							char inputScript[50];
 							sprintf(inputScript, "global.addInput(['pressed', %i, %i, %i]);", activeId, engine->state.x, engine->state.y);
 							jx_wrapper::evaluate(inputScript);
 
-							LOGI("DOWN");
+							LOGI("DOWN , %f, %f", precisionX, precisionY);
 						}
 						break;
 						case AMOTION_EVENT_ACTION_UP: {
@@ -115,8 +118,11 @@ namespace chickpea {
 						break;
 						case AMOTION_EVENT_ACTION_POINTER_DOWN: {
 							activeId = AMotionEvent_getPointerId(event, pointerIndex);
-							engine->state.x = AMotionEvent_getX(event, pointerIndex);
-							engine->state.y = AMotionEvent_getY(event, pointerIndex);
+							float precisionX = AMotionEvent_getXPrecision(event);
+							float precisionY = AMotionEvent_getYPrecision(event);
+
+							engine->state.x = AMotionEvent_getX(event, pointerIndex) / precisionX;
+							engine->state.y = AMotionEvent_getY(event, pointerIndex) / precisionY;
 							LOGI("index: %i, id: %i, x: %i, y: %i", pointerIndex, activeId, engine->state.x, engine->state.y);
 
 							char inputScript[50];
@@ -144,8 +150,11 @@ namespace chickpea {
 						case AMOTION_EVENT_ACTION_MOVE: {
 							for (int i = 0; i < AMotionEvent_getPointerCount(event); i++) {
 								int index = i;
-								engine->state.x = AMotionEvent_getX(event, index);
-								engine->state.y = AMotionEvent_getY(event, index);
+								float precisionX = AMotionEvent_getXPrecision(event);
+								float precisionY = AMotionEvent_getYPrecision(event);
+
+								engine->state.x = AMotionEvent_getX(event, index) / precisionX;
+								engine->state.y = AMotionEvent_getY(event, index) / precisionY;
 								LOGI("index: %i, id: %i, x: %i, y: %i", i, AMotionEvent_getPointerId( event, i ), engine->state.x, engine->state.y);
 
 								char inputScript[50];
@@ -203,6 +212,7 @@ namespace chickpea {
 					jx_wrapper::setRenderCallback(opengl_wrapper::render);
 					jx_wrapper::setSetCameraCallback(opengl_wrapper::setCamera);
 					jx_wrapper::setGetScreenDimensionsCallback(opengl_wrapper::getScreenDimensions);
+					jx_wrapper::setUnprojectCallback(opengl_wrapper::unprojectOnZeroLevel);
 					jx_wrapper::setClearScreenCallback(opengl_wrapper::clearScreen);
 					jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
 					jx_wrapper::evaluate((char*)"global.cacheTexturesInit();");
@@ -235,9 +245,11 @@ namespace chickpea {
 				jx_wrapper::setRenderCallback(opengl_wrapper::render);
 				jx_wrapper::setSetCameraCallback(opengl_wrapper::setCamera);
 				jx_wrapper::setGetScreenDimensionsCallback(opengl_wrapper::getScreenDimensions);
+				jx_wrapper::setUnprojectCallback(opengl_wrapper::unprojectOnZeroLevel);
 				jx_wrapper::setClearScreenCallback(opengl_wrapper::clearScreen);
 				jx_wrapper::setCacheTextureCallback(opengl_wrapper::cacheTexture);
 				jx_wrapper::evaluate((char*)"global.cacheTexturesInit();");
+
 				engine->animating = 1;
 
 				break;

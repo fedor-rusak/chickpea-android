@@ -9,6 +9,8 @@ namespace opengl_wrapper {
 
 	void cacheTexture(char*, char*);
 
+	void unprojectOnZeroLevel(int, int, float*, float*);
+
 	void render(char*, float, float, float);
 
 	void clearScreen(float, float, float);

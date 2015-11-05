@@ -12,6 +12,8 @@ namespace jx_wrapper {
 
 	void setClearScreenCallback(void (*)(float, float, float));
 
+	void setUnprojectCallback(void (*callback)(int, int, float*, float*));
+
 	int init();
 
 	void initForCurrentThread(char*);

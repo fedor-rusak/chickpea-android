@@ -179,7 +179,7 @@ namespace opengl_wrapper {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGB,	w2, h2, 0, GL_RGB, GL_UNSIGNED_BYTE,	imageData);
+		glTexImage2D( GL_TEXTURE_2D, 0,	GL_RGBA,	w2, h2, 0, GL_RGBA, GL_UNSIGNED_BYTE,	imageData);
 		stbi_image_free(imageData);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -256,6 +256,8 @@ namespace opengl_wrapper {
 		// glEnable(GL_CULL_FACE);
 		// glShadeModel(GL_SMOOTH);
 		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
 		readBinaryFile = global->native_stuff.readBinaryFile;
@@ -317,14 +319,45 @@ namespace opengl_wrapper {
 	}
 
 	static glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(0,1,0));
+	static glm::mat4 unprojectViewMatrix = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(0,1,0));
 
 	void setCamera(float offsetX, float offsetY, float offsetZ) {
-		viewMatrix = glm::lookAt(glm::vec3(offsetX,offsetY,offsetZ), glm::vec3(0,0,0), glm::vec3(0,1,0));
+		viewMatrix = glm::lookAt(glm::vec3(offsetX,offsetY,offsetZ), glm::vec3(offsetX,offsetY,0), glm::vec3(0,1,0));
+		unprojectViewMatrix = glm::lookAt(glm::vec3(offsetX,-offsetY,offsetZ), glm::vec3(offsetX,-offsetY,0), glm::vec3(0,1,0));
 	}
 
 	void getScreenDimensions(int* width, int* height) {
 		*width = w;
 		*height = h;
+	}
+
+	void unproject(int winX, int winY, int winZ, glm::mat4x4 mvMatrix, glm::mat4x4 pMatrix, int vpWidth, int vpHeight, float* result) {
+		float x = 2.0 * (winX - 0)/vpWidth - 1,
+			  y = 2.0 * (winY - 0)/vpHeight - 1,
+			  z = 2.0 * winZ - 1;
+
+		glm::mat4x4 vpMatrix = pMatrix * mvMatrix;
+
+		glm::vec4 n = glm::inverse(vpMatrix) * glm::vec4(x,y,z,1.0);
+
+
+		result[0] = n[0]/n[3];
+		result[1] = n[1]/n[3];
+		result[2] = n[2]/n[3];
+	}
+
+	void unprojectOnZeroLevel(int x, int y, float* worldX, float* worldY) {
+		float nearArr[3];
+		float farArr[3];
+
+		unproject(x,y,0, unprojectViewMatrix, mProjMatrix, w, h, nearArr);
+		unproject(x,y,1, unprojectViewMatrix, mProjMatrix, w, h, farArr);
+
+		float t = -nearArr[2] / (farArr[2] - nearArr[2]);
+
+		// float tempZ = near[2] + (far[2] - near[2]) * t;
+		*worldX = nearArr[0] + (farArr[0] - nearArr[0]) * t;
+		*worldY = -(nearArr[1] + (farArr[1] - nearArr[1]) * t);
 	}
 
 	void render(char* textureLabel, float offsetX, float offsetY, float offsetZ) {
