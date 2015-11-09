@@ -9,6 +9,11 @@ function init(global) {
 		global.cacheTexture('explosion', 'images/with_alpha/explosion.png');
 	}
 
+	global.cacheSoundsInit = function() {
+		process.natives.cacheSound('background', 'sound/background.mp3');
+		process.natives.cacheSound('action', 'sound/sfx.wav');
+	}
+
 	var inputDataArray = [];
 
 	global.addInput = function(data) {
@@ -20,8 +25,13 @@ function init(global) {
 			console.log("inputData length = " + inputDataArray.length + ", content:");
 			for (var i = 0; i < inputDataArray.length; i++) {
 				console.log(JSON.stringify(inputDataArray[i]));
-				if (inputDataArray[i][0] !== "release" )
+				if (inputDataArray[i][0] !== "release" ) {
 					console.log(process.natives.unproject(inputDataArray[i][2], inputDataArray[i][3]));
+					if (inputDataArray[i][2] < 500 && !global.soundPlayed) {
+						global.soundPlayed = true;
+						process.natives.playSound();
+					}
+				}
 			}
 
 			//clear

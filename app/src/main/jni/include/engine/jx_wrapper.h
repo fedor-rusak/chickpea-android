@@ -12,7 +12,11 @@ namespace jx_wrapper {
 
 	void setClearScreenCallback(void (*)(float, float, float));
 
-	void setUnprojectCallback(void (*callback)(int, int, float*, float*));
+	void setUnprojectCallback(void (*)(int, int, float*, float*));
+
+	void setCacheSoundCallbacks(void*, void (*)(void*, const char*, char*), void (*)(void*, const char*, char*));
+
+	void setPlaySoundCallback(void (*)(bool));
 
 	int init();
 

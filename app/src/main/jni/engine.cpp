@@ -226,14 +226,17 @@ namespace chickpea {
 				// The window is being hidden or closed, clean it up.
 				terminate_display(engine);
 				opensles_wrapper::setPlayingAssetAudioPlayer(false);
+				// opensles_wrapper::setPlayingAssetAudioPlayer2(false);
 				break;
 			case APP_CMD_GAINED_FOCUS:
 				break;
 			case APP_CMD_PAUSE:
 				opensles_wrapper::setPlayingAssetAudioPlayer(false);
+				// opensles_wrapper::setPlayingAssetAudioPlayer2(false);
 				break;
 			case APP_CMD_RESUME:
 				opensles_wrapper::setPlayingAssetAudioPlayer(true);
+				// opensles_wrapper::setPlayingAssetAudioPlayer2(true);
 				break;
 			case APP_CMD_CONFIG_CHANGED:
 				engine->animating = 0;
@@ -266,9 +269,11 @@ namespace chickpea {
 
 		opensles_wrapper::createEngine();
 		opensles_wrapper::createBufferQueueAudioPlayer();
-		opensles_wrapper::createAssetAudioPlayer(global->native_stuff.assetManager, "sound/background.mp3");
-		opensles_wrapper::setPlayingAssetAudioPlayer(true);
-		//opensles_wrapper::selectClip();
+
+		jx_wrapper::setCacheSoundCallbacks(global->native_stuff.assetManager, opensles_wrapper::createAssetAudioPlayer, opensles_wrapper::createAssetAudioPlayer2);
+		jx_wrapper::evaluate((char*)"global.cacheSoundsInit();");
+
+		jx_wrapper::setPlaySoundCallback(opensles_wrapper::setPlayingAssetAudioPlayer2);
 
 		ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
 		ALooper_addFd(looper, global->io_stuff.msgread, LOOPER_ID_MAIN, ALOOPER_EVENT_INPUT, NULL, NULL);

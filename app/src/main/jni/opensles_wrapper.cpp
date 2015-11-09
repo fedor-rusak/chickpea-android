@@ -171,7 +171,7 @@ namespace opensles_wrapper {
 	static SLVolumeItf fdPlayerVolume;
 
 	// create asset audio player
-	bool createAssetAudioPlayer(void* mgr, const char* utf8) {
+	bool createAssetAudioPlayer(void* mgr, const char* utf8, char* tag) {
 	    SLresult result;
 
 	    assert(NULL != mgr);
@@ -239,6 +239,83 @@ namespace opensles_wrapper {
 	    return JNI_TRUE;
 	}
 
+	static SLObjectItf fd2PlayerObject = NULL;
+	static SLPlayItf fd2PlayerPlay;
+
+	static SLSeekItf fd2PlayerSeek;
+	static SLMuteSoloItf fd2PlayerMuteSolo;
+	static SLVolumeItf fd2PlayerVolume;
+
+	// create asset audio player
+	bool createAssetAudioPlayer2(void* mgr, const char* utf8, char* tag) {
+	    SLresult result;
+
+	    assert(NULL != mgr);
+	    AAsset* asset = AAssetManager_open((AAssetManager*) mgr, utf8, AASSET_MODE_UNKNOWN);
+
+
+	    // the asset might not be found
+	    if (NULL == asset) {
+	        return JNI_FALSE;
+	    }
+
+	    // open asset as file descriptor
+	    off_t start, length;
+	    int fd = AAsset_openFileDescriptor(asset, &start, &length);
+	    assert(0 <= fd);
+	    AAsset_close(asset);
+
+	    // configure audio source
+	    SLDataLocator_AndroidFD loc_fd = {SL_DATALOCATOR_ANDROIDFD, fd, start, length};
+	    SLDataFormat_MIME format_mime = {SL_DATAFORMAT_MIME, NULL, SL_CONTAINERTYPE_UNSPECIFIED};
+	    SLDataSource audioSrc = {&loc_fd, &format_mime};
+
+	    // configure audio sink
+	    SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
+	    SLDataSink audioSnk = {&loc_outmix, NULL};
+
+	    // create audio player
+	    const SLInterfaceID ids[3] = {SL_IID_SEEK, SL_IID_MUTESOLO, SL_IID_VOLUME};
+	    const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+	    result = (*engineEngine)->CreateAudioPlayer(engineEngine, &fd2PlayerObject, &audioSrc, &audioSnk,
+	            3, ids, req);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // realize the player
+	    result = (*fdPlayerObject)->Realize(fd2PlayerObject, SL_BOOLEAN_FALSE);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // get the play interface
+	    result = (*fdPlayerObject)->GetInterface(fd2PlayerObject, SL_IID_PLAY, &fd2PlayerPlay);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // get the seek interface
+	    result = (*fdPlayerObject)->GetInterface(fd2PlayerObject, SL_IID_SEEK, &fd2PlayerSeek);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // get the mute/solo interface
+	    result = (*fdPlayerObject)->GetInterface(fd2PlayerObject, SL_IID_MUTESOLO, &fd2PlayerMuteSolo);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // get the volume interface
+	    result = (*fdPlayerObject)->GetInterface(fd2PlayerObject, SL_IID_VOLUME, &fd2PlayerVolume);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    // enable whole file looping
+	    result = (*fdPlayerSeek)->SetLoop(fd2PlayerSeek, SL_BOOLEAN_FALSE, 0, SL_TIME_UNKNOWN);
+	    assert(SL_RESULT_SUCCESS == result);
+	    (void)result;
+
+	    return JNI_TRUE;
+	}
+
+
 	static const char hello[] =
 	#include "hello_clip.h"
 	;
@@ -274,8 +351,23 @@ namespace opensles_wrapper {
 	        assert(SL_RESULT_SUCCESS == result);
 	        (void)result;
 	    }
-
 	}
+
+
+	void setPlayingAssetAudioPlayer2(bool isPlaying) {
+	    SLresult result;
+
+	    // make sure the asset audio player was created
+	    if (NULL != fdPlayerPlay) {
+	    	
+	        // set the player's state
+	        result = (*fdPlayerPlay)->SetPlayState(fd2PlayerPlay, isPlaying ?
+	            SL_PLAYSTATE_PLAYING : SL_PLAYSTATE_PAUSED);
+	        assert(SL_RESULT_SUCCESS == result);
+	        (void)result;
+	    }
+	}
+
 
 	void shutdown() {
 

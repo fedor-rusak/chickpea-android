@@ -162,6 +162,43 @@ namespace jx_wrapper {
 		JX_DefineExtension("unproject", unproject);
 	}
 
+	void* assetManagerForSound;
+	void (*backgroundCacheSound)(void*, const char*, char*);
+	void (*actionCacheSound)(void*, const char*, char*);
+
+	void cacheSound(JXValue *results, int argc) {
+		char* tagValue = JX_GetString(&results[0]);
+		char* path = JX_GetString(&results[1]);
+
+		LOGI("tag!!! %s!!!", tagValue);
+		if (strcmp((char*) "background", tagValue) == 0) {
+			backgroundCacheSound(assetManagerForSound, (const char*)path, tagValue);
+		}
+		else if (strcmp((char*) "action", tagValue) == 0) {
+			actionCacheSound(assetManagerForSound, (const char*)path, tagValue);
+		}
+	}
+
+	void setCacheSoundCallbacks(void* assetManagerForSoundValue, void (*backgroundCacheSoundCallback)(void*, const char*, char*), void (*actionCacheSoundCallback)(void*, const char*, char*)) {
+		assetManagerForSound = assetManagerForSoundValue;
+		backgroundCacheSound = backgroundCacheSoundCallback;
+		actionCacheSound = actionCacheSoundCallback;
+
+		JX_DefineExtension("cacheSound", cacheSound);
+	}
+
+
+	void (*playSoundCallback)(bool);
+
+	void playSound(JXValue *results, int argc) {
+		playSoundCallback(true);
+	}
+
+	void setPlaySoundCallback(void (*callback)(bool)) {
+		playSoundCallback = callback;
+
+		JX_DefineExtension("playSound", playSound);
+	}
 
 
 	static bool JXCoreInitialized = false;
