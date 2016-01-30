@@ -44,7 +44,7 @@ try {
 
 	global.require = require;
 
-	require("/init.js")(global);
+	require("/init.js")(global, process.natives);
 }
 catch(e) {
 	console.log("init.js error: "+e);
